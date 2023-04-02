@@ -1,11 +1,15 @@
 import json
+import logging
+import math
 import time
+import traceback
 from uuid import UUID
 
 import numpy as np
+from sklearn.exceptions import FitFailedWarning
 from sklearn.model_selection import GridSearchCV, ParameterGrid
 
-from budgetsvm.kernel import GaussianKernel, Kernel, PolynomialKernel
+from budgetsvm.kernel import GaussianKernel, Kernel, PolynomialKernel, PrecomputedKernel
 
 
 class CustomJSONEncoder(json.JSONEncoder):
@@ -17,47 +21,32 @@ class CustomJSONEncoder(json.JSONEncoder):
         return super().default(obj)
 
 
-def model_selection(model, X_train, X_test, y_train, y_test, cv: int = None):
+def model_selection(model, X_train, X_test, y_train, y_test, cv: int = 5):
     """ Try multiple values of C and multiple kernels configurations. Return most accurate model"""
     c_values = np.logspace(-3, 3, 7)
     # c_values = np.logspace(-1, 1, 3)
     kernel_values = [GaussianKernel(s) for s in c_values]
-    kernel_values.extend([PolynomialKernel(deg) for deg in range(2, 10)])
+    #kernel_values.extend([PolynomialKernel(deg) for deg in range(2, 10)])
     grid_params = {'C': c_values, 'kernel': kernel_values}
     if model.budget:
         grid_params = {'budget': [model.budget], **grid_params}
 
-    if cv:
-        try:
-            cvgrid = GridSearchCV(model, grid_params, refit=True, verbose=0, cv=cv)
-            cvgrid.fit(X_train, y_train)
-            test_accuracy = cvgrid.score(X_test, y_test)
-            return cvgrid.best_estimator_, cvgrid.best_params_, test_accuracy
-        except:
-            return None, None, "Error while training"
-    else:
-        # no cross validation
-        best_score = 0
-        best_hp = None
-        for hp in ParameterGrid(grid_params):
-            model.set_params(**hp)
-            try:
-                model.fit(X_train, y_train)
-            except:
-                continue
+    cvgrid = GridSearchCV(model, grid_params, refit=True, verbose=0, cv=cv, n_jobs=-1)
+    test_accuracy = 0.0
+    try:
+        num_params = math.prod(len(x) for x in cvgrid.param_grid.values())
+        logging.debug(f"Launching GridSearcCV on {model} - {num_params} params, {cv}-folds, "
+                      f"for a total of {num_params * cv} fit calls.")
+        cvgrid.fit(X_train, y_train)
+        test_accuracy = cvgrid.score(X_test, y_test)
+    except FitFailedWarning:
+        pass
+    except Exception as e:
+        logging.error(f"GridSearchCV failed with unexpected error.\n{grid_params}")
+        logging.error(traceback.format_exc())
+        return None, None, "Error while training"
 
-            score = model.score(X_test, y_test)
-            if score > best_score:
-                best_score = score
-                best_hp = hp
-
-        if best_hp is None:
-            return None, None, "Model selection failed"
-
-        model.set_params(**best_hp)
-        model.fit(X_train, y_train)
-
-        return model, best_hp, best_score
+    return cvgrid.best_estimator_, cvgrid.best_params_, test_accuracy
 
 
 class Timer:

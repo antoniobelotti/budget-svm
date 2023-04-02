@@ -25,7 +25,7 @@ def get_dataset_hash(params):
     return hashlib.md5(params_str).hexdigest()
 
 
-def cache(dataset_create):
+def cache_dataset(dataset_create):
     """
     Decorator function that loads a dataset if it already exists, else creates it and saves it.
     Decorated function must return X_train, X_test, y_train, y_test
@@ -80,7 +80,7 @@ def get_labeling_function(beta, rho, theta):
     return lf
 
 
-@cache
+@cache_dataset
 def dataset_from_custom_function(beta=1, rho=.2, theta=10, n=300, test_size=.3, random_state=42):
     labeling_function = get_labeling_function(beta, rho, theta)
 
@@ -91,7 +91,7 @@ def dataset_from_custom_function(beta=1, rho=.2, theta=10, n=300, test_size=.3, 
     return train_test_split(X, y, test_size=test_size, random_state=random_state)
 
 
-@cache
+@cache_dataset
 def unbalanced_dataset_from_custom_function(beta=1, rho=.2, theta=10, population_size=1000, sample_size=300,
                                             perc_positives=.5, test_size=.3, random_state=42):
     labeling_function = get_labeling_function(beta, rho, theta)
@@ -115,7 +115,7 @@ def unbalanced_dataset_from_custom_function(beta=1, rho=.2, theta=10, population
     return train_test_split(sample_X, sample_y, test_size=test_size, random_state=random_state)
 
 
-@cache
+@cache_dataset
 def dataset_make_moons(n=300, noise=.1, test_size=.3, random_state=42):
     X, y = make_moons(n_samples=n, noise=noise, random_state=random_state)
     X = preprocessing.MinMaxScaler().fit_transform(X)
@@ -123,7 +123,7 @@ def dataset_make_moons(n=300, noise=.1, test_size=.3, random_state=42):
     return train_test_split(X, y, test_size=test_size, random_state=random_state)
 
 
-@cache
+@cache_dataset
 def dataset_make_blobs(n=300, cluster_std=.2, centers=2, test_size=.3, random_state=42):
     X, y = make_blobs(n_samples=n, cluster_std=cluster_std, random_state=random_state, centers=centers)
     X = preprocessing.MinMaxScaler().fit_transform(X)
@@ -167,6 +167,13 @@ def generate_datasets():
     for cfg in CUSTOM_CONFIGURATIONS:
         yield dataset_from_custom_function(**cfg)
 
+    BLOBS_CONFIGURATIONS = [
+        {"cluster_std": .6},
+        {"cluster_std": 2},
+    ]
+    for cfg in BLOBS_CONFIGURATIONS:
+        yield dataset_make_blobs(**cfg)
+
     """
     # Generate dataset using scikit learn
     MOONS_CONFIGURATIONS = [
@@ -175,13 +182,6 @@ def generate_datasets():
     ]
     for cfg in MOONS_CONFIGURATIONS:
         yield dataset_make_moons(**cfg)
-
-    BLOBS_CONFIGURATIONS = [
-        {"cluster_std": .6},
-        {"cluster_std": 2},
-    ]
-    for cfg in BLOBS_CONFIGURATIONS:
-        yield dataset_make_blobs(**cfg)
     """
 
 
