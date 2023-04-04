@@ -193,6 +193,23 @@ def generate_datasets():
 
     # plt.plot(x_df, y_df)
 
+    #def get_decision_function(beta, rho, theta):
+    #    return lambda x: 1 / (1 + np.exp(-beta * (x - 0.5))) + rho * np.sin(2 * np.pi * theta * x)
+#
+    #for b, r, t in zip(
+    #        np.linspace(0, 10, 10),
+    #        np.linspace(0, 1, 10),
+    #        [10]*10,
+    #):
+    #    ds = dataset_from_custom_function(b, r, t)
+    #    plt.scatter(*ds.X.T, c=ds.y)
+#
+    #    x_df = np.linspace(0, 1, 500)
+    #    y_df = get_decision_function(b, r, t)(x_df)
+    #    plt.plot(x_df, y_df)
+    #    plt.show()
+
+
     # ds = dataset_from_custom_function(95, .2, 10)
     # plt.plot(x_df, y_df)
     # plt.scatter(*ds.X.T, c=ds.y)

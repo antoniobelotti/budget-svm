@@ -1,4 +1,5 @@
 """ to suppress sklearn warnings. Many warning are thrown during model selection."""
+import traceback
 
 
 def warn(*args, **kwargs):
@@ -53,6 +54,10 @@ def task_experiment_on_dataset(dataset):
         logging.debug(
             f"Dataset {dataset.id[-10:]} Budget {perc * 100}% - "
             f"Model selection took {t.time} seconds")
+
+        if not hasattr(best_model, "optimal_"):
+            logging.error(f"Trained model {best_model} has no attribute optimal_. This should not happen.")
+            best_model.optimal_ = False
 
         best_model_uuid = uuid.uuid4()
         results.append({
@@ -111,7 +116,13 @@ if __name__ == "__main__":
     res = []
     for ds in generate_datasets():
         logging.info(f"Launching experiments on dataset f{ds.id}")
-        res.extend(task_experiment_on_dataset(ds))
+        try:
+            ds_res = task_experiment_on_dataset(ds)
+        except Exception as e:
+            logging.error(traceback.format_exc())
+            continue
+
+        res.extend(ds_res)
 
     logging.info("Saving models on disk")
     pathlib.Path(BASE_DIR_PATH / "models").mkdir(exist_ok=True)
