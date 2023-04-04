@@ -133,25 +133,17 @@ def dataset_make_blobs(n=300, cluster_std=.2, centers=2, test_size=.3, random_st
 
 def generate_unbalanced_datasets():
     custom_configurations = [
-        {"beta": 1, "rho": 0.2, "theta": 10, "perc_positives": 0.6},
         {"beta": 1, "rho": 0.2, "theta": 10, "perc_positives": 0.7},
         {"beta": 1, "rho": 0.2, "theta": 10, "perc_positives": 0.8},
-        {"beta": 1, "rho": 0.2, "theta": 10, "perc_positives": 0.9},
 
-        {"beta": 95, "rho": 0.2, "theta": 10, "perc_positives": 0.6},
         {"beta": 95, "rho": 0.2, "theta": 10, "perc_positives": 0.7},
         {"beta": 95, "rho": 0.2, "theta": 10, "perc_positives": 0.8},
-        {"beta": 95, "rho": 0.2, "theta": 10, "perc_positives": 0.9},
 
-        {"beta": 0, "rho": 0.3, "theta": 3, "perc_positives": 0.6},
         {"beta": 0, "rho": 0.3, "theta": 3, "perc_positives": 0.7},
         {"beta": 0, "rho": 0.3, "theta": 3, "perc_positives": 0.8},
-        {"beta": 0, "rho": 0.3, "theta": 3, "perc_positives": 0.9},
 
-        {"beta": 0, "rho": 0.1, "theta": 8, "perc_positives": 0.6},
         {"beta": 0, "rho": 0.1, "theta": 8, "perc_positives": 0.7},
         {"beta": 0, "rho": 0.1, "theta": 8, "perc_positives": 0.8},
-        {"beta": 0, "rho": 0.1, "theta": 8, "perc_positives": 0.9},
     ]
     for cfg in custom_configurations:
         yield unbalanced_dataset_from_custom_function(**cfg)

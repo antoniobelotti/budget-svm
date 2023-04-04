@@ -24,7 +24,7 @@ import uuid
 import numpy as np
 
 from budgetsvm.svm import SVC
-from experiments.datasets import generate_datasets
+from experiments.datasets import generate_datasets, generate_unbalanced_datasets
 from experiments.utils import Timer, model_selection, CustomJSONEncoder
 
 
@@ -114,7 +114,7 @@ if __name__ == "__main__":
     )
 
     res = []
-    for ds in generate_datasets():
+    for ds in generate_unbalanced_datasets():
         logging.info(f"Launching experiments on dataset f{ds.id}")
         try:
             ds_res = task_experiment_on_dataset(ds)
