@@ -261,6 +261,8 @@ class GurobiSolver(Solver):
                     if model.Status != GRB.TIME_LIMIT or model.SolCount == 0:
                         raise ValueError("no solution found! " f"status={model.Status}")
 
+                self.obj_val = model.getObjective().getValue()
+
                 alpha_opt = np.array([a.x for a in alpha])
                 if budget is not None:
                     gamma_opt = np.array([g.x for g in gamma])

@@ -71,6 +71,8 @@ class SVC(ClassifierMixin, BaseEstimator):
             X, y, C=self.C, kernel=self.kernel, budget=self.budget
         )
 
+        self.obj_ = solver.obj_val
+
         sv_mask = (0 < alpha) & (alpha < self.C)
         if self.kernel.precomputed:
             self.sv_mask_ = sv_mask
