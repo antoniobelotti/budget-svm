@@ -9,7 +9,7 @@ import numpy as np
 from sklearn.exceptions import FitFailedWarning
 from sklearn.model_selection import GridSearchCV, ParameterGrid
 
-from budgetsvm.kernel import GaussianKernel, Kernel, PolynomialKernel, PrecomputedKernel
+from budgetsvm.kernel import GaussianKernel, Kernel, PolynomialKernel, PrecomputedKernel, LinearKernel
 
 
 class CustomJSONEncoder(json.JSONEncoder):
@@ -18,25 +18,41 @@ class CustomJSONEncoder(json.JSONEncoder):
             return str(obj)
         if isinstance(obj, UUID):
             return str(obj)
+        if isinstance(obj, np.integer):
+            return int(obj)
+        if isinstance(obj, np.floating):
+            return float(obj)
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
         return super().default(obj)
 
 
-def model_selection(model, X_train, X_test, y_train, y_test, cv: int = 5):
+def model_selection(model, X_train, X_test, y_train, y_test, cfg):
     """ Try multiple values of C and multiple kernels configurations. Return most accurate model"""
-    c_values = np.logspace(-3, 3, 7)
-    # c_values = np.logspace(-1, 1, 3)
-    kernel_values = [GaussianKernel(s) for s in c_values]
-    #kernel_values.extend([PolynomialKernel(deg) for deg in range(2, 10)])
+
+    c_values = cfg.get("C", [1.0])
+
+    kernel_values = []
+    for kernel_name, hp in cfg.get("kernels", ["linear"]).items():
+        if kernel_name == "linear":
+            kernel_values.append(LinearKernel())
+        if kernel_name == "gaussian":
+            for v in hp:
+                kernel_values.append(GaussianKernel(v))
+        if kernel_name == "polynomial":
+            for v in hp:
+                kernel_values.append(PolynomialKernel(v))
+
     grid_params = {'C': c_values, 'kernel': kernel_values}
     if model.budget:
         grid_params = {'budget': [model.budget], **grid_params}
 
-    cvgrid = GridSearchCV(model, grid_params, refit=True, verbose=0, cv=cv, n_jobs=-1)
+    cvgrid = GridSearchCV(model, grid_params, refit=True, verbose=0, cv=cfg.get("cv", 5), n_jobs=-1)
     test_accuracy = 0.0
     try:
         num_params = math.prod(len(x) for x in cvgrid.param_grid.values())
-        logging.debug(f"Launching GridSearcCV on {model} - {num_params} params, {cv}-folds, "
-                      f"for a total of {num_params * cv} fit calls.")
+        logging.debug(f"Launching GridSearcCV on {model} - {num_params} params, {cfg.get('cv', 5)}-folds, "
+                      f"for a total of {num_params * cfg.get('cv', 5)} fit calls.")
         cvgrid.fit(X_train, y_train)
         test_accuracy = cvgrid.score(X_test, y_test)
     except FitFailedWarning:

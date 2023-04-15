@@ -1,5 +1,9 @@
 """ to suppress sklearn warnings. Many warning are thrown during model selection."""
+import sys
 import traceback
+
+from experiments.synthetic_datasets.pacman_ds import get_pacman_dataset
+from experiments.synthetic_datasets.sinusoid_ds import get_sinusoid_dataset
 
 
 def warn(*args, **kwargs):
@@ -10,6 +14,7 @@ import warnings
 
 warnings.warn = warn
 
+import itertools as it
 import logging
 import datetime
 import json
@@ -24,54 +29,67 @@ import uuid
 import numpy as np
 
 from budgetsvm.svm import SVC
-from experiments.datasets import generate_datasets, generate_unbalanced_datasets
 from experiments.utils import Timer, model_selection, CustomJSONEncoder
 
 
-def task_experiment_on_dataset(dataset):
+def task_experiment_on_dataset(dataset, cfg):
     best_sv_number = None
     prev_budget = None
 
     results = []
-    for perc in np.linspace(1.0, 0.3, 8):
+    for perc in sorted(cfg.get("budget_percentages", [1.0]), reverse=True):
         budget = None
         if best_sv_number:
             budget = int(best_sv_number * perc)
             if budget == prev_budget or budget < 2:
                 logging.debug(
                     f"dataset {dataset.id}: skip budget {perc * 100} either because it's <2 or equal to previous "
-                    f"iteration budget")
+                    f"iteration budget"
+                )
             prev_budget = budget
 
         model = SVC(budget=budget) if budget else SVC()
         model_name = "full_budget" if not best_sv_number else f"{perc:.2f}_budget"
 
-        logging.debug(f"Dataset {dataset.id[-10:]} Budget {perc * 100}% - Launching model selection")
+        logging.debug(
+            f"Dataset {dataset.id[-10:]} Budget {perc * 100}% - Launching model selection"
+        )
 
         with Timer() as t:
-            best_model, params, score = model_selection(model, dataset.X_train, dataset.X_test, dataset.y_train,
-                                                        dataset.y_test, cv=5)
+            best_model, params, score = model_selection(
+                model,
+                dataset.X_train,
+                dataset.X_test,
+                dataset.y_train,
+                dataset.y_test,
+                cfg["model_selection"],
+            )
         logging.debug(
             f"Dataset {dataset.id[-10:]} Budget {perc * 100}% - "
-            f"Model selection took {t.time} seconds")
+            f"Model selection took {t.time} seconds"
+        )
 
         if not hasattr(best_model, "optimal_"):
-            logging.error(f"Trained model {best_model} has no attribute optimal_. This should not happen.")
+            logging.error(
+                f"Trained model {best_model} has no attribute optimal_. This should not happen."
+            )
             best_model.optimal_ = False
 
         best_model_uuid = uuid.uuid4()
-        results.append({
-            "dataset": dataset.id,
-            "model_UUID": best_model_uuid,
-            "model": best_model,
-            "model_name": model_name,
-            "optimal": best_model.optimal_ if best_model else None,
-            "params": params,
-            "score": score,
-            "budget": budget if budget else math.inf,
-            "num_sv": len(best_model.alpha_) if best_model else None,
-            "train_time": t.time
-        })
+        results.append(
+            {
+                "dataset": dataset.id,
+                "model_UUID": best_model_uuid,
+                "model": best_model,
+                "model_name": model_name,
+                "optimal": best_model.optimal_ if best_model else None,
+                "params": params,
+                "score": score,
+                "budget": budget if budget else math.inf,
+                "num_sv": len(best_model.alpha_) if best_model else None,
+                "train_time": t.time,
+            }
+        )
 
         # if current trained model is full budget save the number of sv.
         if not best_sv_number:
@@ -80,8 +98,26 @@ def task_experiment_on_dataset(dataset):
     return results
 
 
+def get_datasets(cfg):
+    n_try_different_seed = cfg.get("n_repeat_sampling", 1)
+    r_values = cfg.get("r_values", [0])
+    p_values = cfg.get("p_values", [1])
+
+    if "sinusoid" in cfg:
+        rng = np.random.default_rng(0)
+        seeds = rng.integers(0, high=2**32 - 1, size=n_try_different_seed)
+        for base_params, seed, r, p in it.product(cfg["sinusoid"], seeds, r_values, p_values):
+            yield get_sinusoid_dataset(r=r, p=p, seed=seed, **base_params)
+
+    if "pacman" in cfg:
+        rng = np.random.default_rng(0)
+        seeds = rng.integers(0, high=2**32 - 1, size=n_try_different_seed)
+        for base_params, seed, r, p in it.product(cfg["pacman"], seeds, r_values, p_values):
+            yield get_pacman_dataset(r=r, p=p, seed=seed, **base_params)
+
+
 if __name__ == "__main__":
-    BASE_DIR_PATH = pathlib.Path(os.path.dirname(__file__)).absolute() / pathlib.Path('results')
+    BASE_DIR_PATH = pathlib.Path(os.path.dirname(__file__)).absolute() / pathlib.Path("results")
     BASE_DIR_PATH.mkdir(parents=True, exist_ok=True)
 
     NOW = time.time()
@@ -93,31 +129,28 @@ if __name__ == "__main__":
         format="%(asctime)s [%(levelname)s] %(message)s",
         handlers=[
             logging.FileHandler(BASE_DIR_PATH / f"{NOW}.log"),
-            logging.StreamHandler()
-        ]
+            logging.StreamHandler(),
+        ],
     )
 
-    np.random.seed(42)
+    with open("experiment_config.json", "rb") as f:
+        config = json.load(f)
 
     logging.info(
-        textwrap.dedent(f"""
-            DESCRIPTION:
+        textwrap.dedent(
+            f"""
+            Running experiment with the following configuration:
             
-                Foreach dataset:
-                    train unconstrained SVC
-                    For budget in [.3,.4,.5,.6,.7,.8,.9]% of sup.vec. of unconstrained model
-                        train SVC(budget=budget)
-               
-                - 4 datasets from custom function, 2 dataset from sklearn make_blobs. Each dataset has 300 points.
-                - 5-fold stratified cross validation
-            """)
+            {json.dumps(config, indent=4)}
+            """
+        )
     )
 
     res = []
-    for ds in generate_unbalanced_datasets():
+    for ds in get_datasets(config["datasets"]):
         logging.info(f"Launching experiments on dataset f{ds.id}")
         try:
-            ds_res = task_experiment_on_dataset(ds)
+            ds_res = task_experiment_on_dataset(ds, config)
         except Exception as e:
             logging.error(traceback.format_exc())
             continue
