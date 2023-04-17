@@ -7,9 +7,9 @@ from uuid import UUID
 
 import numpy as np
 from sklearn.exceptions import FitFailedWarning
-from sklearn.model_selection import GridSearchCV, ParameterGrid
+from sklearn.model_selection import GridSearchCV
 
-from budgetsvm.kernel import GaussianKernel, Kernel, PolynomialKernel, PrecomputedKernel, LinearKernel
+from budgetsvm.kernel import GaussianKernel, Kernel, PolynomialKernel, LinearKernel
 
 
 class CustomJSONEncoder(json.JSONEncoder):
@@ -61,6 +61,9 @@ def model_selection(model, X_train, X_test, y_train, y_test, cfg):
         logging.error(f"GridSearchCV failed with unexpected error.\n{grid_params}")
         logging.error(traceback.format_exc())
         return None, None, "Error while training"
+
+    if test_accuracy == 0.0:
+        logging.warning(f"GridSearchCV - best model has 0.0 test accuracy, no errors during training ")
 
     return cvgrid.best_estimator_, cvgrid.best_params_, test_accuracy
 
