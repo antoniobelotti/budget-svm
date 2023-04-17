@@ -117,7 +117,9 @@ def get_datasets(cfg):
 
 
 if __name__ == "__main__":
-    BASE_DIR_PATH = pathlib.Path(os.path.dirname(__file__)).absolute() / pathlib.Path("results")
+    CWD = pathlib.Path(os.path.dirname(__file__)).absolute() 
+ 
+    BASE_DIR_PATH = pathlib.Path(CWD / "results")
     BASE_DIR_PATH.mkdir(parents=True, exist_ok=True)
 
     NOW = time.time()
@@ -133,7 +135,7 @@ if __name__ == "__main__":
         ],
     )
 
-    with open("experiment_config.json", "rb") as f:
+    with open(pathlib.Path(CWD / "experiment_config.json"), "rb") as f:
         config = json.load(f)
 
     logging.info(
