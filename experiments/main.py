@@ -4,6 +4,7 @@ import traceback
 
 from experiments.synthetic_datasets.pacman_ds import get_pacman_dataset
 from experiments.synthetic_datasets.sinusoid_ds import get_sinusoid_dataset
+from experiments.synthetic_datasets.sklearn_ds import get_skl_classification_dataset
 
 
 def warn(*args, **kwargs):
@@ -114,6 +115,12 @@ def get_datasets(cfg):
         seeds = rng.integers(0, high=2**32 - 1, size=n_try_different_seed)
         for base_params, seed, r, p in it.product(cfg["pacman"], seeds, r_values, p_values):
             yield get_pacman_dataset(r=r, p=p, seed=seed, **base_params)
+
+    if "skl_classification" in cfg:
+        rng = np.random.default_rng(0)
+        seeds = rng.integers(0, high=2 ** 32 - 1, size=n_try_different_seed)
+        for base_params, seed, r, p in it.product(cfg["skl_classification"], seeds, r_values, p_values):
+            yield get_skl_classification_dataset(r=r, p=p, seed=seed, **base_params)
 
 
 if __name__ == "__main__":
