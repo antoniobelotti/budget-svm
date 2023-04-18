@@ -1,109 +1,93 @@
-from experiments.datasets import generate_datasets
-from budgetsvm.svm import SVC
-import math
-import uuid
-from experiments.utils import Timer, model_selection, CustomJSONEncoder
-import logging
-import time
-import pathlib
-import os
-import textwrap
-import pickle
 import json
+import logging
+import math
+import os
+import pathlib
+import time
 
-BASE_DIR_PATH = pathlib.Path(os.path.dirname(__file__)).absolute() / pathlib.Path('results')
+from sklearn.model_selection import ParameterGrid
+
+from budgetsvm.svm import SVC
+from experiments.main import get_datasets
+from experiments.utils import Timer, CustomJSONEncoder
+from kernel import LinearKernel, GaussianKernel, PolynomialKernel
+
+CWD = pathlib.Path(os.path.dirname(__file__)).absolute()
+BASE_DIR_PATH = pathlib.Path(CWD / "results")
 BASE_DIR_PATH.mkdir(parents=True, exist_ok=True)
 
 NOW = time.time()
-OUT_FILE_PATH = pathlib.Path(BASE_DIR_PATH / f"{NOW}_100per_budget.json")
-DESCRIPTION_FILE_PATH = pathlib.Path(BASE_DIR_PATH / f"{NOW}_100per_budget.description")
+OUT_FILE_PATH = pathlib.Path(BASE_DIR_PATH / f"{NOW}_100per_budget_no_cv.json")
+DESCRIPTION_FILE_PATH = pathlib.Path(BASE_DIR_PATH / f"{NOW}_100per_budget_no_cv.description")
 
+with open(pathlib.Path(CWD / "experiment_config.json"), "rb") as f:
+    config = json.load(f)
 
 logging.basicConfig(
         level=logging.DEBUG,
         format="%(asctime)s [%(levelname)s] %(message)s",
         handlers=[
-            logging.FileHandler(BASE_DIR_PATH / f"{NOW}_100per_budget.log"),
+            logging.FileHandler(BASE_DIR_PATH / f"{NOW}_100per_budget_no_cv.log"),
             logging.StreamHandler()
             ]
         )
 
-logging.info(
-    textwrap.dedent(f"""
-        DESCRIPTION:
-        
-            Foreach dataset:
-                train unconstrained SVC
-                train with budget==unconstrained model number of SV
-           
-            - 4 datasets from custom function, 2 dataset from sklearn make_blobs. Each dataset has 300 points.
-            - 5-fold stratified cross validation
-        """)
-)
 
 results = []
-for ds in generate_datasets():
+for ds in get_datasets(config["datasets"]):
     logging.info(f"Starting on dataset {ds.id}")
 
-    with Timer() as t:
-        unconstr_model,unconstr_params, unconstr_score = model_selection(SVC(), ds.X_train, ds.X_test, ds.y_train, ds.y_test, cv=5)
+    c_values = config["model_selection"].get("C", [1.0])
 
-    logging.debug(
-            f"Dataset {ds.id[-10:]} unconstrained model"
-            f"Model selection took {t.time} seconds")
+    kernel_values = []
+    for kernel_name, hp in config["model_selection"].get("kernels", ["linear"]).items():
+        if kernel_name == "linear":
+            kernel_values.append(LinearKernel())
+        if kernel_name == "gaussian":
+            for v in hp:
+                kernel_values.append(GaussianKernel(v))
+        if kernel_name == "polynomial":
+            for v in hp:
+                kernel_values.append(PolynomialKernel(v))
 
-    if not hasattr(unconstr_model, "optimal_"):
-        logging.error(f"Trained model {unconstr_model} has no attribute optimal_. This should not happen.")
-        unconstr_model.optimal_ = False
+    grid_params = ParameterGrid({'C': c_values, 'kernel': kernel_values})
+    for params in grid_params:
+        logging.debug(f"Dataset {ds.id[-10:]} params {params} ")
+        logging.debug("training unconstrained model")
+        with Timer() as t:
+            model = SVC()
+            model.fit(ds.X_train, ds.y_train)
+            score = model.score(ds.X_test, ds.y_test)
 
-    unconstr_model_uuid = uuid.uuid4()
-    results.append({
-        "dataset": ds.id,
-        "model_UUID": unconstr_model_uuid,
-        "model": unconstr_model,
-        "model_name": "unconstrained",
-        "optimal": unconstr_model.optimal_ if unconstr_model else None,
-        "params": unconstr_params,
-        "obj_fn_value": unconstr_model.obj_,
-        "score": unconstr_score,
-        "budget": math.inf,
-        "num_sv": len(unconstr_model.alpha_) if unconstr_model else None,
-        "train_time": t.time
+        results.append({
+            "dataset": ds.id,
+            "model_name": "unconstrained",
+            "params": params,
+            "test_score": score,
+            "obj_fn_value": model.obj_,
+            "sv": len(model.alpha_),
+            "budget": math.inf,
+            "train_time": t.time
+            })
+        logging.debug(f"unconstrained model has {len(model.alpha_)} SV")
+        logging.debug(f"training model with budget={len(model.alpha_)}")
+        with Timer() as t:
+            model = SVC()
+            model.fit(ds.X_train, ds.y_train)
+            score = model.score(ds.X_test, ds.y_test)
+
+        results.append({
+            "dataset": ds.id,
+            "model_name": "unconstrained",
+            "params": params,
+            "test_score": score,
+            "obj_fn_value": model.obj_,
+            "sv": len(model.alpha_),
+            "budget": math.inf,
+            "train_time": t.time
         })
+        logging.debug(f"done for dataset {ds.id[-10:]}")
 
-    logging.debug(f"Dataset {ds.id[-10:]} trying 100% budget using {len(unconstr_model.alpha_)} SV")
-    with Timer() as t:
-        budget_model,budget_params, budget_score = model_selection(SVC(), ds.X_train, ds.X_test, ds.y_train, ds.y_test, cv=5)
-
-    logging.debug(
-            f"Dataset {ds.id[-10:]} 100% budget model"
-            f"Model selection took {t.time} seconds")
-
-    budget_model_uuid = uuid.uuid4()
-    results.append({
-        "dataset": ds.id,
-        "model_UUID": budget_model_uuid,
-        "model": budget_model,
-        "model_name": "100perc_budget",
-        "optimal": budget_model.optimal_ if budget_model else None,
-        "params": budget_params,
-        "obj_fn_value": budget_model.obj_,
-        "score": budget_score,
-        "budget": math.inf,
-        "num_sv": len(budget_model.alpha_) if budget_model else None,
-        "train_time": t.time
-        })
-
-
-logging.info("Saving models on disk")
-pathlib.Path(BASE_DIR_PATH / "models").mkdir(exist_ok=True)
-for r in results:
-    model_name = r.get("model_UUID", "?")
-    model = r.pop("model", None)
-    if model is None:
-        continue
-    with open(BASE_DIR_PATH / "models" / f"{model_name}.pkl", "wb") as f:
-        pickle.dump(model, f)
 
 logging.info("Saving results on disk")
 with open(OUT_FILE_PATH, "w+") as f:
