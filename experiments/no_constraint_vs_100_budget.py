@@ -3,6 +3,7 @@ import logging
 import math
 import os
 import pathlib
+import textwrap
 import time
 
 from sklearn.model_selection import ParameterGrid
@@ -20,7 +21,7 @@ NOW = time.time()
 OUT_FILE_PATH = pathlib.Path(BASE_DIR_PATH / f"{NOW}_100per_budget_no_cv.json")
 DESCRIPTION_FILE_PATH = pathlib.Path(BASE_DIR_PATH / f"{NOW}_100per_budget_no_cv.description")
 
-with open(pathlib.Path(CWD / "experiment_config.json"), "rb") as f:
+with open(pathlib.Path(CWD / "100_budget_config.json"), "rb") as f:
     config = json.load(f)
 
 logging.basicConfig(
@@ -32,6 +33,15 @@ logging.basicConfig(
             ]
         )
 
+logging.info(
+    textwrap.dedent(
+        f"""
+            Running experiment with the following configuration:
+
+            {json.dumps(config, indent=4)}
+            """
+    )
+)
 
 results = []
 for ds in get_datasets(config["datasets"]):
@@ -56,34 +66,46 @@ for ds in get_datasets(config["datasets"]):
         logging.debug("training unconstrained model")
         with Timer() as t:
             model = SVC()
-            model.fit(ds.X_train, ds.y_train)
-            score = model.score(ds.X_test, ds.y_test)
+            try:
+                model.fit(ds.X_train, ds.y_train)
+                score = model.score(ds.X_test, ds.y_test)
+            except:
+                model=None
+                score = 0
 
         results.append({
             "dataset": ds.id,
             "model_name": "unconstrained",
-            "params": params,
-            "test_score": score,
-            "obj_fn_value": model.obj_,
-            "sv": len(model.alpha_),
+            "params": {k:str(v) for k,v in params.items()},
+            "score": score,
+            "obj_fn_value": model.obj_ if model else 0,
+            "num_sv": len(model.alpha_) if model else 0,
             "budget": math.inf,
+            "optimal": model.optimal_ if model else False,
             "train_time": t.time
             })
         logging.debug(f"unconstrained model has {len(model.alpha_)} SV")
         logging.debug(f"training model with budget={len(model.alpha_)}")
+        budget = len(model.alpha_)
+
         with Timer() as t:
-            model = SVC()
-            model.fit(ds.X_train, ds.y_train)
-            score = model.score(ds.X_test, ds.y_test)
+            model = SVC(budget=budget)
+            try:
+                model.fit(ds.X_train, ds.y_train)
+                score = model.score(ds.X_test, ds.y_test)
+            except:
+                model=None
+                score = 0
 
         results.append({
             "dataset": ds.id,
-            "model_name": "unconstrained",
-            "params": params,
-            "test_score": score,
-            "obj_fn_value": model.obj_,
-            "sv": len(model.alpha_),
-            "budget": math.inf,
+            "model_name": "100perc_budget",
+            "params": {k:str(v) for k,v in params.items()},
+            "score": score,
+            "obj_fn_value": model.obj_ if model else 0,
+            "num_sv": len(model.alpha_) if model else 0,
+            "budget": budget,
+            "optimal": model.optimal_ if model else False,
             "train_time": t.time
         })
         logging.debug(f"done for dataset {ds.id[-10:]}")

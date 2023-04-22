@@ -1,0 +1,25 @@
+{
+    "datasets": {
+        "sinusoid": [
+            {"beta": 1, "rho": 0.2, "theta": 10},
+            {"beta": 95, "rho": 0.2, "theta": 10},
+            {"beta": 0, "rho": 0.1, "theta": 8}
+        ],
+        "pacman": [
+            {"a": 0.1, "gamma": 10},
+            {"a": 0.5, "gamma": 10},
+            {"a": 1, "gamma": 10}
+        ],
+        "r_values": [0],
+        "p_values": [1],
+        "n_repeat_sampling": 1
+    },
+    "model_selection": {
+        "C": [0.1, 1, 10, 100],
+        "kernels": {
+            "gaussian": [0.00001, 0.0001, 0.001, 0.01, 0.1, 1],
+            "linear": null,
+            "polynomial": [2, 5, 10]
+        }
+    }
+}
