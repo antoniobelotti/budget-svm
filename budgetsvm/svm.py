@@ -46,6 +46,19 @@ class SVC(ClassifierMixin, BaseEstimator):
     def __vec_decode_label(self, it):
         return np.vectorize(self.__decode_label)(it)
 
+    def _more_tags(self):
+        """ From sklearn documentation https://scikit-learn.org/stable/developers/develop.html
+
+        pairwise (default=False)
+            This boolean attribute indicates whether the data (X) fit and similar methods consists of pairwise measures
+            over samples rather than a feature representation for each sample. It is usually True where an estimator has
+            a metric or affinity or kernel parameter with value ‘precomputed’. Its primary purpose is to support a
+            meta-estimator or a cross validation procedure that extracts a sub-sample of data intended for a pairwise
+            estimator, where the data needs to be indexed on both axes. Specifically, this tag is used by _safe_split
+            to slice rows and columns.
+        """
+        return {"pairwise": self.kernel.precomputed}
+
     def fit(self, X, y, warn=False):
         X, y = check_X_y(X, y)
 
