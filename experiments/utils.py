@@ -45,10 +45,17 @@ def run_cvgrid(model, precomputed_X_train, precomputed_X_test, y_train, y_test, 
 
 
 def model_selection(model, X_train, X_test, y_train, y_test, cfg):
+    kernelcfg = cfg.get("kernels", {"linear"})
+    num_params = len(cfg.get("C", [1.0])) * (
+        len(kernelcfg.get("gaussian", [])) + len(kernelcfg.get("polynomial", [])) + 1 if "linear" in kernelcfg else 0)
+
+    logging.debug(f"Launching GridSearcCV on {model} - {num_params} params, {cfg.get('cv', 5)}-folds, "
+                  f"for a total of {num_params * cfg.get('cv', 5)} fit calls.")
+
     best_estimator = None
     best_score = 0.0
     best_params = None
-    for kernel_name, hp in cfg.get("kernels", ["linear"]).items():
+    for kernel_name, hp in cfg.get("kernels", {"linear"}).items():
         match kernel_name:
             case "linear":
                 kernel = PrecomputedKernel(original_kernel=LinearKernel())
