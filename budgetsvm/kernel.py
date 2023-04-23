@@ -265,26 +265,12 @@ class HyperbolicKernel(Kernel):
 class PrecomputedKernel(Kernel):
     """Precomputed kernel class."""
 
-    def __init__(self, kernel_computations):
+    def __init__(self, original_kernel = GaussianKernel()):
         r"""Create an instance of `PrecomputedKernel`.
-
-        :param kernel_computations: kernel computations.
-        :type kernel_computations: square matrix of float elements
-        :raises: ValueError if `kernel_computations` is not a square
-          bidimensional array.
         """
         super().__init__()
         self.precomputed = True
-        return
-        try:
-            (rows, columns) = np.array(kernel_computations).shape
-        except ValueError:
-            raise ValueError("The supplied matrix is not array-like ")
-
-        if rows != columns:
-            raise ValueError("The supplied matrix is not square")
-
-        self.kernel_computations = kernel_computations
+        self.original_kernel = original_kernel
 
     def compute(self, arg_1, arg_2):
         r"""Compute the kernel value.
@@ -299,14 +285,8 @@ class PrecomputedKernel(Kernel):
         :type arg_2: iterable of `float`
         :returns: `float` -- kernel value.
         """
-        return float(self.kernel_computations[arg_1[0]][arg_2[0]])
+        return self.original_kernel.compute(arg_1, arg_2)
 
     def __repr__(self):
         """Return the python representation of the kernel."""
-        return f"PrecomputedKernel({self.kernel_computations})"
-
-    def __eq__(self, other):
-        return (
-            isinstance(other, PrecomputedKernel)
-            and self.kernel_computations == other.kernel_computations
-        )
+        return f"PrecomputedKernel({self.original_kernel.__repr__()})"

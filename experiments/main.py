@@ -124,60 +124,61 @@ def get_datasets(cfg):
 
 
 if __name__ == "__main__":
-    CWD = pathlib.Path(os.path.dirname(__file__)).absolute() 
- 
-    BASE_DIR_PATH = pathlib.Path(CWD / "results")
-    BASE_DIR_PATH.mkdir(parents=True, exist_ok=True)
+    with Timer() as main_timer:
+        CWD = pathlib.Path(os.path.dirname(__file__)).absolute()
 
-    NOW = time.time()
-    OUT_FILE_PATH = pathlib.Path(BASE_DIR_PATH / f"{NOW}.json")
-    DESCRIPTION_FILE_PATH = pathlib.Path(BASE_DIR_PATH / f"{NOW}.description")
+        BASE_DIR_PATH = pathlib.Path(CWD / "results")
+        BASE_DIR_PATH.mkdir(parents=True, exist_ok=True)
 
-    logging.basicConfig(
-        level=logging.DEBUG,
-        format="%(asctime)s [%(levelname)s] %(message)s",
-        handlers=[
-            logging.FileHandler(BASE_DIR_PATH / f"{NOW}.log"),
-            logging.StreamHandler(),
-        ],
-    )
+        NOW = time.time()
+        OUT_FILE_PATH = pathlib.Path(BASE_DIR_PATH / f"{NOW}.json")
+        DESCRIPTION_FILE_PATH = pathlib.Path(BASE_DIR_PATH / f"{NOW}.description")
 
-    with open(pathlib.Path(CWD / "experiment_config.json"), "rb") as f:
-        config = json.load(f)
-
-    logging.info(
-        textwrap.dedent(
-            f"""
-            Running experiment with the following configuration:
-            
-            {json.dumps(config, indent=4)}
-            """
+        logging.basicConfig(
+            level=logging.DEBUG,
+            format="%(asctime)s [%(levelname)s] %(message)s",
+            handlers=[
+                logging.FileHandler(BASE_DIR_PATH / f"{NOW}.log"),
+                logging.StreamHandler(),
+            ],
         )
-    )
 
-    res = []
-    for ds in get_datasets(config["datasets"]):
-        logging.info(f"Launching experiments on dataset f{ds.id}")
-        try:
-            ds_res = task_experiment_on_dataset(ds, config)
-        except Exception as e:
-            logging.error(traceback.format_exc())
-            continue
+        with open(pathlib.Path(CWD / "dev_exp_config_small.json"), "rb") as f:
+            config = json.load(f)
 
-        res.extend(ds_res)
+        logging.info(
+            textwrap.dedent(
+                f"""
+                Running experiment with the following configuration:
+                
+                {json.dumps(config, indent=4)}
+                """
+            )
+        )
 
-    logging.info("Saving models on disk")
-    pathlib.Path(BASE_DIR_PATH / "models").mkdir(exist_ok=True)
-    for r in res:
-        model_name = r.get("model_UUID", "?")
-        model = r.pop("model", None)
-        if model is None:
-            continue
-        with open(BASE_DIR_PATH / "models" / f"{model_name}.pkl", "wb") as f:
-            pickle.dump(model, f)
+        res = []
+        for ds in get_datasets(config["datasets"]):
+            logging.info(f"Launching experiments on dataset f{ds.id}")
+            try:
+                ds_res = task_experiment_on_dataset(ds, config)
+            except Exception as e:
+                logging.error(traceback.format_exc())
+                continue
 
-    logging.info("Saving results on disk")
-    with open(OUT_FILE_PATH, "w+") as f:
-        f.write(json.dumps(res, cls=CustomJSONEncoder))
+            res.extend(ds_res)
 
-    logging.info("Done")
+        logging.info("Saving models on disk")
+        pathlib.Path(BASE_DIR_PATH / "models").mkdir(exist_ok=True)
+        for r in res:
+            model_name = r.get("model_UUID", "?")
+            model = r.pop("model", None)
+            if model is None:
+                continue
+            with open(BASE_DIR_PATH / "models" / f"{model_name}.pkl", "wb") as f:
+                pickle.dump(model, f)
+
+        logging.info("Saving results on disk")
+        with open(OUT_FILE_PATH, "w+") as f:
+            f.write(json.dumps(res, cls=CustomJSONEncoder))
+
+    logging.info(f"Done in {main_timer.time}")
