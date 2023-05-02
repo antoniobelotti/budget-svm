@@ -8,8 +8,8 @@ from experiments.synthetic_datasets.common import (
 
 
 def __get_pacman_labeling_function(alpha):
-    def labeling_fn(x1, x2):
-        y = x2 - (alpha * x1) ** 2
+    def labeling_fn(*coord):
+        y = coord[-1] - sum((alpha * x) ** 2 for x in coord[:-1])
         y[y > 0] = 1
         y[y <= 0] = -1
         return y
@@ -18,9 +18,6 @@ def __get_pacman_labeling_function(alpha):
 
 @cache_dataset
 def get_pacman_dataset(n=300, a=1, r=0, p=1, dim=2, gamma=10, test_size=0.3, seed=42):
-    if dim != 2:
-        raise NotImplementedError("Only 2D datasets are supported.")
-
     rng = np.random.default_rng(seed)
 
     # create a population 10 times bigger than n
