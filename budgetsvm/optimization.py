@@ -180,10 +180,11 @@ class GurobiSolver(Solver):
             assert budget > 0
 
         with Env(empty=True) as env:
-            env.setParam("OutputFlag", 0)
+            env.setParam("LogToConsole", 0)
+            env.setParam("LogFile", "gurobi.log")
             env.start()
             with Model("svc", env=env) as model:
-                model.setParam("OutputFlag", 0)
+                model.setParam("LogToConsole", 0)
                 model.setParam("TimeLimit", self.time_limit)
                 if budget is not None:
                     # model.setParam('NonConvex', 2)
