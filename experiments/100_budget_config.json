@@ -1,14 +1,9 @@
 {
     "datasets": {
-        "sinusoid": [
-            {"beta": 1, "rho": 0.2, "theta": 10},
-            {"beta": 95, "rho": 0.2, "theta": 10},
-            {"beta": 0, "rho": 0.1, "theta": 8}
-        ],
         "pacman": [
-            {"a": 0.1, "gamma": 10},
-            {"a": 0.5, "gamma": 10},
-            {"a": 1, "gamma": 10}
+            {"n": 1000, "a": 0.1, "gamma": 10},
+            {"n": 1000, "a": 0.5, "gamma": 10},
+            {"n": 1000, "a": 1, "gamma": 10}
         ],
         "r_values": [0],
         "p_values": [1],

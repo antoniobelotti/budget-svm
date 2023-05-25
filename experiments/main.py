@@ -132,7 +132,6 @@ if __name__ == "__main__":
 
         NOW = time.time()
         OUT_FILE_PATH = pathlib.Path(BASE_DIR_PATH / f"{NOW}.json")
-        DESCRIPTION_FILE_PATH = pathlib.Path(BASE_DIR_PATH / f"{NOW}.description")
 
         logging.basicConfig(
             level=logging.DEBUG,

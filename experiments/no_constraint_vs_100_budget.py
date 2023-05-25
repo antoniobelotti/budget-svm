@@ -65,7 +65,7 @@ for ds in get_datasets(config["datasets"]):
         logging.debug(f"Dataset {ds.id[-10:]} params {params} ")
         logging.debug("training unconstrained model")
         with Timer() as t:
-            model = SVC()
+            model = SVC(**params)
             try:
                 model.fit(ds.X_train, ds.y_train)
                 score = model.score(ds.X_test, ds.y_test)
@@ -89,7 +89,7 @@ for ds in get_datasets(config["datasets"]):
         budget = len(model.alpha_)
 
         with Timer() as t:
-            model = SVC(budget=budget)
+            model = SVC(budget=budget, **params)
             try:
                 model.fit(ds.X_train, ds.y_train)
                 score = model.score(ds.X_test, ds.y_test)
