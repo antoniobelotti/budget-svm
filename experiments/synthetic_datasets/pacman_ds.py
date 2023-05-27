@@ -24,6 +24,7 @@ def get_pacman_dataset(n=300, a=1, r=0, p=1, dim=2, gamma=10, test_size=0.3, see
     mean = np.zeros(dim)
     cov = np.eye(dim) * gamma
     population_X = rng.multivariate_normal(mean, cov, n * 10, check_valid="raise")
+    population_X = (population_X - np.min(population_X)) / (np.max(population_X) - np.min(population_X))
 
     # label each point in the population
     labeling_function = __get_pacman_labeling_function(a)
