@@ -72,11 +72,11 @@ class Solver(ABC):
             alpha = solution
         else:
             alpha, gamma = solution
-            gamma[np.isclose(gamma, 0)] = 0
-            gamma[np.isclose(gamma, 1)] = 1
+            gamma[np.isclose(gamma, 0, atol=1e-6, rtol=0)] = 0
+            gamma[np.isclose(gamma, 1, atol=1e-6, rtol=0)] = 1
 
-        alpha[np.isclose(alpha, 0)] = 0
-        alpha[np.isclose(alpha, C)] = C
+        alpha[np.isclose(alpha, 0, atol=1e-6, rtol=0)] = 0
+        alpha[np.isclose(alpha, C, atol=1e-6, rtol=0)] = C
 
         if budget is not None:
             alpha[gamma == 0] = 0
