@@ -6,7 +6,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-from gurobipy import LinExpr, GRB, Model, Env, QuadExpr, GurobiError
+from gurobipy import LinExpr, GRB, Model, Env, QuadExpr, quicksum
 from budgetsvm.kernel import GaussianKernel
 
 
@@ -186,17 +186,12 @@ class GurobiSolver(Solver):
             with Model("svc", env=env) as model:
                 model.setParam("LogToConsole", 0)
                 model.setParam("TimeLimit", self.time_limit)
-                if budget is not None:
-                    # model.setParam('NonConvex', 2)
-                    pass
 
-                for i in range(m):
-                    model.addVar(name=f"alpha_{i}", lb=0, ub=C, vtype=GRB.CONTINUOUS)
+                model.addVars(list(range(m)), lb=0, ub=C, vtype=GRB.CONTINUOUS)
+
                 if budget is not None:
                     for i in range(m):
                         model.addVar(name=f"gamma_{i}", vtype=GRB.BINARY)
-                        # model.addVar(name=f'gamma_{i}', lb=0, ub=1,
-                        #             vtype=GRB.CONTINUOUS)
 
                 model.update()
                 vars = model.getVars()
@@ -215,8 +210,7 @@ class GurobiSolver(Solver):
 
                 obj = QuadExpr()
 
-                for a in alpha:
-                    obj.add(a, 1)
+                obj.addTerms([1.0] * len(alpha), alpha.tolist())
 
                 if kernel.precomputed:
                     for i, j in it.product(range(m), range(m)):
@@ -231,18 +225,10 @@ class GurobiSolver(Solver):
                             -0.5 * y[i] * y[j] * kernel.compute(X[i], X[j]),
                         )
 
-                penalty = lambda gamma: -sum([g * (1 - g) for g in gamma])
-                # penalty = lambda gamma: sum([g**g * (1-g)**(1-g) for g in gamma])
-                # TODO: add other penalty, with argument to the method
-
-                if budget is not None:
-                    # obj.add(penalty(gamma), 1000)
-                    pass
-
                 model.setObjective(obj, GRB.MAXIMIZE)
 
                 constEqual = LinExpr()
-                constEqual.add(sum(alpha * y), 1.0)
+                constEqual.add(quicksum(alpha * y), 1.0)
 
                 model.addLConstr(constEqual, GRB.EQUAL, 0)
 
@@ -253,7 +239,7 @@ class GurobiSolver(Solver):
                         model.addQConstr(const, GRB.LESS_EQUAL, C * g)
 
                     const = LinExpr()
-                    const.add(sum(gamma), 1.0)
+                    const.add(quicksum(gamma), 1.0)
                     model.addLConstr(const, GRB.LESS_EQUAL, budget)
 
                 model.optimize()
