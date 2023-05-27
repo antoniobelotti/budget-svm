@@ -416,7 +416,6 @@ class ReusableGurobiSolver(Solver):
         self.m = None
 
     def __init_base_model(self, X, y, C, kernel=GaussianKernel()):
-        t = time.perf_counter()
         self.env.start()
 
         model = Model("svc", env=self.env)
@@ -481,10 +480,7 @@ class ReusableGurobiSolver(Solver):
 
         self.model = model
 
-        print(f"model construction took {time.perf_counter() - t}")
-
     def __update_model_budget_constraint(self, budget):
-        t = time.perf_counter()
         assert self.model
 
         existing_constr = self.model.getConstrByName("budget_constraint")
@@ -497,8 +493,6 @@ class ReusableGurobiSolver(Solver):
             const = LinExpr()
             const.add(quicksum(gamma), 1.0)
             self.model.addLConstr(const, GRB.LESS_EQUAL, budget, name="budget_constraint")
-
-        print(f"budget update model took {time.perf_counter() - t}")
 
     def solve_classification_problem(
             self, X, y, C=1, kernel=GaussianKernel(), budget=None
@@ -543,9 +537,7 @@ class ReusableGurobiSolver(Solver):
         if budget:
             self.__update_model_budget_constraint(budget)
 
-        t = time.perf_counter()
         self.model.optimize()
-        print(f"optimize took {time.perf_counter() - t}")
 
         if self.model.Status != GRB.OPTIMAL:
             if self.model.Status != GRB.TIME_LIMIT or self.model.SolCount == 0:
