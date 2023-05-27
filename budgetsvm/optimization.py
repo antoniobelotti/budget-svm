@@ -531,7 +531,8 @@ class ReusableGurobiSolver(Solver):
         assert C > 0
 
         if self.m is not None and self.m != m:
-            print("m != saved m. Reinitialize model. Should not happen")
+            # this happens when using cross validation. The dataset is the same, so we reuse the same solver object,
+            # but fit is done on a different subset of points, so we rebuild the model.
             self.model = None
 
         self.m = m

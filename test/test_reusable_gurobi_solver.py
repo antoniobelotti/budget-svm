@@ -15,8 +15,8 @@ class SVCTests(unittest.TestCase):
     def test_reusable_gurobi_solver_works_with_no_budget(self):
         ds = get_pacman_dataset(a=0.1)
         solver = ReusableGurobiSolver()
-        model = SVC(solver=solver)
-        model.fit(ds.X_train, ds.y_train)
+        model = SVC()
+        model.fit(ds.X_train, ds.y_train, solver=solver)
         print(model.score(ds.X_test, ds.y_test))
 
     def test_multiple_runs_of_reusable_gurobi_solver(self):
@@ -24,13 +24,13 @@ class SVCTests(unittest.TestCase):
 
         solver = ReusableGurobiSolver()
 
-        model = SVC(solver=solver)
-        model.fit(ds.X_train, ds.y_train)
+        model = SVC()
+        model.fit(ds.X_train, ds.y_train, solver=solver)
         print(model.score(ds.X_test, ds.y_test))
         print(f"unconstrained model found {len(model.alpha_)} support vectors")
 
-        bmodel = SVC(budget=len(model.alpha_), solver=solver)
-        bmodel.fit(ds.X_train, ds.y_train)
+        bmodel = SVC(budget=len(model.alpha_))
+        bmodel.fit(ds.X_train, ds.y_train, solver=solver)
         print(bmodel.score(ds.X_test, ds.y_test))
         print(f"100% budget model found {len(bmodel.alpha_)} support vectors")
 
