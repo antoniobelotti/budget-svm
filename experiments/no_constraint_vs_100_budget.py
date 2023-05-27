@@ -73,6 +73,9 @@ for ds in get_datasets(config["datasets"]):
                 model=None
                 score = 0
 
+        if model is None:
+            continue
+
         results.append({
             "dataset": ds.id,
             "model_name": "unconstrained",
