@@ -59,7 +59,7 @@ class SVC(ClassifierMixin, BaseEstimator):
         """
         return {"pairwise": self.kernel.precomputed}
 
-    def fit(self, X, y, warn=False):
+    def fit(self, X, y, warn=False, solver=opt.GurobiSolver()):
         X, y = check_X_y(X, y)
 
         if self.kernel.precomputed and X.shape[0] != X.shape[1]:
@@ -79,7 +79,6 @@ class SVC(ClassifierMixin, BaseEstimator):
 
         y = self.__vec_encode_label(y)
 
-        solver = opt.GurobiSolver()
         alpha, optimal = solver.solve(
             X, y, C=self.C, kernel=self.kernel, budget=self.budget
         )
