@@ -1,12 +1,9 @@
 """ to suppress sklearn warnings. Many warning are thrown during model selection."""
-import copy
-import sys
 import traceback
 from concurrent.futures import ProcessPoolExecutor
-from functools import reduce
-from multiprocessing import Pool, cpu_count
-from typing import List, Any
 
+
+from numpy._typing import ArrayLike
 from sklearn.exceptions import FitFailedWarning
 from sklearn.model_selection import StratifiedKFold, GridSearchCV
 
@@ -50,17 +47,17 @@ from experiments.utils import Timer, CustomJSONEncoder
 
 def model_selection_precomp_kernel(
         dataset_id: str,
-        precomputed_X_train: list[list] | np.array,
-        precomputed_X_test: list[list] | np.array,
-        y_train: list[int] | np.array,
-        y_test: list[int] | np.array,
+        precomputed_X_train: ArrayLike,
+        precomputed_X_test: ArrayLike,
+        y_train: ArrayLike,
+        y_test: ArrayLike,
         kernel: Kernel,
         cv: int,
         c_values: list[float],
         budget_percentages: list[float],
         seed: int = 42,
 ) -> list[dict]:
-    print(f"Model selection on dataset {dataset_id} using {kernel}, from pid={os.getpid()}")
+
     solver = ReusableGurobiSolver()
 
     best_sv_number = None
@@ -111,6 +108,13 @@ def model_selection_precomp_kernel(
             except Exception as e:
                 logging.error("GridSearchCV failed with unexpected error.")
                 logging.error(traceback.format_exc())
+
+        if best_model is None:
+            if best_sv_number is None:
+                return [] # model selection failed on regular unconstrained model
+
+            # a budget constrained model selection failed. Continue and try another budget value
+            continue
 
         logging.debug(
             f"Dataset {dataset.id[-10:]} Budget {perc * 100}% - "
@@ -253,7 +257,7 @@ if __name__ == "__main__":
             ],
         )
 
-        with open(pathlib.Path(CWD / "dev_exp_config_small.json"), "rb") as f:
+        with open(pathlib.Path(CWD / "experiment_config.json"), "rb") as f:
             config = json.load(f)
 
         logging.info(
