@@ -29,7 +29,6 @@ import warnings
 warnings.warn = warn
 
 import itertools as it
-import logging
 import json
 import math
 import os
@@ -58,6 +57,7 @@ def model_selection_precomp_kernel(
         seed: int = 42,
 ) -> list[dict]:
 
+    print(f"model selection on dataset {dataset_id} with kernel {kernel}")
     solver = ReusableGurobiSolver()
 
     best_sv_number = None
@@ -69,7 +69,7 @@ def model_selection_precomp_kernel(
         if best_sv_number:
             budget = int(best_sv_number * perc)
             if budget == prev_budget or budget < 2:
-                logging.debug(
+                print(
                     f"dataset {dataset.id}: skip budget {perc * 100} either because it's <2 or equal to previous "
                     f"iteration budget"
                 )
@@ -78,7 +78,7 @@ def model_selection_precomp_kernel(
         model = SVC(budget=budget) if budget else SVC()
         model_name = "full_budget" if not best_sv_number else f"{perc:.2f}_budget"
 
-        logging.debug(
+        print(
             f"Dataset {dataset.id[-10:]} Budget {perc * 100}% - Launching model selection"
         )
 
@@ -106,8 +106,8 @@ def model_selection_precomp_kernel(
             except FitFailedWarning:
                 pass
             except Exception as e:
-                logging.error("GridSearchCV failed with unexpected error.")
-                logging.error(traceback.format_exc())
+                print("GridSearchCV failed with unexpected error.")
+                print(traceback.format_exc())
 
         if best_model is None:
             if best_sv_number is None:
@@ -116,13 +116,13 @@ def model_selection_precomp_kernel(
             # a budget constrained model selection failed. Continue and try another budget value
             continue
 
-        logging.debug(
+        print(
             f"Dataset {dataset.id[-10:]} Budget {perc * 100}% - "
             f"Model selection took {t.time} seconds"
         )
 
         if not hasattr(best_model, "optimal_"):
-            logging.error(
+            print(
                 f"Trained model {best_model} has no attribute optimal_. This should not happen."
             )
             best_model.optimal_ = False
@@ -154,10 +154,10 @@ def process_dataset(dataset, cfg) -> list[dict]:
     """
     Foreach parameter train a model on dataset and return the best performing model
     """
-    logging.info(f"Processing dataset {dataset.id}")
+    print(f"Processing dataset {dataset.id}")
     executor = ProcessPoolExecutor(max_workers=os.cpu_count())
     futures = []
-    logging.info(f"using an executor with {executor._max_workers} workers")
+    print(f"using an executor with {executor._max_workers} workers")
 
     for kernel_name, kernel_parameters in cfg["model_selection"]["kernels"].items():
         # linear kernel has no parameters
@@ -248,19 +248,10 @@ if __name__ == "__main__":
         NOW = time.time()
         OUT_FILE_PATH = pathlib.Path(BASE_DIR_PATH / f"{NOW}.json")
 
-        logging.basicConfig(
-            level=logging.DEBUG,
-            format="%(asctime)s [%(levelname)s] %(message)s",
-            handlers=[
-                logging.FileHandler(BASE_DIR_PATH / f"{NOW}.log"),
-                logging.StreamHandler(),
-            ],
-        )
-
         with open(pathlib.Path(CWD / "experiment_config.json"), "rb") as f:
             config = json.load(f)
 
-        logging.info(
+        print(
             textwrap.dedent(
                 f"""
                 Running experiment with the following configuration:
@@ -274,7 +265,7 @@ if __name__ == "__main__":
         for dataset in get_datasets(config["datasets"]):
             res.extend(process_dataset(dataset, config))
 
-        logging.info("Saving models on disk")
+        print("Saving models on disk")
         pathlib.Path(BASE_DIR_PATH / "models").mkdir(exist_ok=True)
         for r in res:
             model_name = r.get("model_UUID", "?")
@@ -284,10 +275,10 @@ if __name__ == "__main__":
             with open(BASE_DIR_PATH / "models" / f"{model_name}.pkl", "wb") as f:
                 pickle.dump(model, f)
 
-        logging.info("Saving results on disk")
+        print("Saving results on disk")
         with open(OUT_FILE_PATH, "w+") as f:
             f.write(json.dumps(res, cls=CustomJSONEncoder))
 
-        logging.info(res)
+        print(res)
 
-    logging.info(f"Done in {main_timer.time}")
+    print(f"Done in {main_timer.time}")
