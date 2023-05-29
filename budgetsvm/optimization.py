@@ -420,6 +420,7 @@ class ReusableGurobiSolver(Solver):
 
         model = Model("svc", env=self.env)
         model.setParam("LogToConsole", 0)
+        model.setParam("NonConvex", 2)
         model.setParam("TimeLimit", self.time_limit)
 
         model.addVars(list(range(self.m)), lb=0, ub=C, vtype=GRB.CONTINUOUS, name="alpha")
