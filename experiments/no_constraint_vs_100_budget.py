@@ -5,6 +5,7 @@ import os
 import pathlib
 import textwrap
 import time
+import uuid
 
 from sklearn.model_selection import ParameterGrid
 
@@ -12,6 +13,7 @@ from budgetsvm.svm import SVC
 from experiments.main import get_datasets
 from experiments.utils import Timer, CustomJSONEncoder
 from kernel import LinearKernel, GaussianKernel, PolynomialKernel
+from optimization import ReusableGurobiSolver
 
 CWD = pathlib.Path(os.path.dirname(__file__)).absolute()
 BASE_DIR_PATH = pathlib.Path(CWD / "results")
@@ -19,19 +21,21 @@ BASE_DIR_PATH.mkdir(parents=True, exist_ok=True)
 
 NOW = time.time()
 OUT_FILE_PATH = pathlib.Path(BASE_DIR_PATH / f"{NOW}_100per_budget_no_cv.json")
-DESCRIPTION_FILE_PATH = pathlib.Path(BASE_DIR_PATH / f"{NOW}_100per_budget_no_cv.description")
+DESCRIPTION_FILE_PATH = pathlib.Path(
+    BASE_DIR_PATH / f"{NOW}_100per_budget_no_cv.description"
+)
 
 with open(pathlib.Path(CWD / "100_budget_config.json"), "rb") as f:
     config = json.load(f)
 
 logging.basicConfig(
-        level=logging.DEBUG,
-        format="%(asctime)s [%(levelname)s] %(message)s",
-        handlers=[
-            logging.FileHandler(BASE_DIR_PATH / f"{NOW}_100per_budget_no_cv.log"),
-            logging.StreamHandler()
-            ]
-        )
+    level=logging.DEBUG,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[
+        logging.FileHandler(BASE_DIR_PATH / f"{NOW}_100per_budget_no_cv.log"),
+        logging.StreamHandler(),
+    ],
+)
 
 logging.info(
     textwrap.dedent(
@@ -60,58 +64,86 @@ for ds in get_datasets(config["datasets"]):
             for v in hp:
                 kernel_values.append(PolynomialKernel(v))
 
-    grid_params = ParameterGrid({'C': c_values, 'kernel': kernel_values})
+    grid_params = ParameterGrid({"C": c_values, "kernel": kernel_values})
     for params in grid_params:
         logging.debug(f"Dataset {ds.id[-10:]} params {params} ")
         logging.debug("training unconstrained model")
+        unconstrained_model_solver = ReusableGurobiSolver()
         with Timer() as t:
-            model = SVC(**params)
+            unconstrained_model = SVC(**params)
             try:
-                model.fit(ds.X_train, ds.y_train)
-                score = model.score(ds.X_test, ds.y_test)
+                unconstrained_model.fit(
+                    ds.X_train, ds.y_train, solver=unconstrained_model_solver
+                )
+                score = unconstrained_model.score(ds.X_test, ds.y_test)
             except:
-                model=None
+                unconstrained_model = None
                 score = 0
 
-        if model is None:
+        if unconstrained_model is None:
             continue
 
-        results.append({
-            "dataset": ds.id,
-            "model_name": "unconstrained",
-            "params": {k:str(v) for k,v in params.items()},
-            "score": score,
-            "obj_fn_value": model.obj_ if model else 0,
-            "num_sv": len(model.alpha_) if model else 0,
-            "budget": math.inf,
-            "optimal": model.optimal_ if model else False,
-            "train_time": t.time
-            })
-        logging.debug(f"unconstrained model has {len(model.alpha_)} SV")
-        logging.debug(f"training model with budget={len(model.alpha_)}")
-        budget = len(model.alpha_)
+        unconstrained_model_uuid = uuid.uuid4()
+        results.append(
+            {
+                "dataset": ds.id,
+                "model_name": "unconstrained",
+                "model_uuid": unconstrained_model_uuid,
+                "params": {k: str(v) for k, v in params.items()},
+                "score": score,
+                "obj_fn_value": unconstrained_model.obj_ if unconstrained_model else 0,
+                "num_sv": len(unconstrained_model.alpha_) if unconstrained_model else 0,
+                "budget": math.inf,
+                "optimal": unconstrained_model.optimal_
+                if unconstrained_model
+                else False,
+                "train_time": t.time,
+            }
+        )
+        logging.debug(f"unconstrained model has {len(unconstrained_model.alpha_)} SV")
+        logging.debug(f"training model with budget={len(unconstrained_model.alpha_)}")
+        budget = len(unconstrained_model.alpha_)
 
+        budgeted_model_solver = ReusableGurobiSolver()
         with Timer() as t:
-            model = SVC(budget=budget, **params)
+            budgeted_model = SVC(budget=budget, **params)
             try:
-                model.fit(ds.X_train, ds.y_train)
-                score = model.score(ds.X_test, ds.y_test)
+                budgeted_model.fit(ds.X_train, ds.y_train, solver=budgeted_model_solver)
+                score = budgeted_model.score(ds.X_test, ds.y_test)
             except:
-                model=None
+                budgeted_model = None
                 score = 0
 
-        results.append({
-            "dataset": ds.id,
-            "model_name": "100perc_budget",
-            "params": {k:str(v) for k,v in params.items()},
-            "score": score,
-            "obj_fn_value": model.obj_ if model else 0,
-            "num_sv": len(model.alpha_) if model else 0,
-            "budget": budget,
-            "optimal": model.optimal_ if model else False,
-            "train_time": t.time
-        })
+        budgeted_model_uuid = uuid.uuid4()
+        results.append(
+            {
+                "dataset": ds.id,
+                "model_name": "100perc_budget",
+                "model_uuid": budgeted_model_uuid,
+                "params": {k: str(v) for k, v in params.items()},
+                "score": score,
+                "obj_fn_value": budgeted_model.obj_ if budgeted_model else 0,
+                "num_sv": len(budgeted_model.alpha_) if budgeted_model else 0,
+                "budget": budget,
+                "optimal": budgeted_model.optimal_ if budgeted_model else False,
+                "train_time": t.time,
+            }
+        )
         logging.debug(f"done for dataset {ds.id[-10:]}")
+        logging.debug(f"unconstrained model has {len(unconstrained_model.alpha_)} SV")
+
+        if (
+            unconstrained_model
+            and budgeted_model
+            and unconstrained_model.optimal_
+            and budgeted_model.optimal_
+            and unconstrained_model.obj_ != budgeted_model.obj_
+        ):
+            logging.error(
+                f"both optimal, different obj fun value. models:[\n\tunconstr: {unconstrained_model_uuid}\n\tbudgeted: {budgeted_model_uuid}\n]"
+            )
+            unconstrained_model_solver.model.write(f"{unconstrained_model_uuid}.lp")
+            budgeted_model_solver.model.write(f"{budgeted_model_uuid}.lp")
 
 
 logging.info("Saving results on disk")
