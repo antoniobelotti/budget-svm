@@ -1,7 +1,8 @@
 """ to suppress sklearn warnings. Many warning are thrown during model selection."""
+import multiprocessing
 import traceback
 from concurrent.futures import ProcessPoolExecutor
-
+from multiprocessing import Process, Queue
 
 from numpy._typing import ArrayLike
 from sklearn.exceptions import FitFailedWarning
@@ -45,25 +46,24 @@ from experiments.utils import Timer, CustomJSONEncoder
 
 
 def model_selection_precomp_kernel(
-        dataset_id: str,
-        precomputed_X_train: ArrayLike,
-        precomputed_X_test: ArrayLike,
-        y_train: ArrayLike,
-        y_test: ArrayLike,
-        kernel: Kernel,
-        cv: int,
-        c_values: list[float],
-        budget_percentages: list[float],
-        seed: int = 42,
-) -> list[dict]:
-
+    dataset_id: str,
+    precomputed_X_train: ArrayLike,
+    precomputed_X_test: ArrayLike,
+    y_train: ArrayLike,
+    y_test: ArrayLike,
+    kernel: Kernel,
+    cv: int,
+    c_values: list[float],
+    budget_percentages: list[float],
+    queue: Queue,
+    seed: int = 42
+):
     print(f"model selection on dataset {dataset_id} with kernel {kernel}")
-    solver = ReusableGurobiSolver()
+    # solver = ReusableGurobiSolver()
 
     best_sv_number = None
     prev_budget = None
 
-    results = []
     for perc in sorted(budget_percentages, reverse=True):
         budget = None
         if best_sv_number:
@@ -79,7 +79,7 @@ def model_selection_precomp_kernel(
         model_name = "full_budget" if not best_sv_number else f"{perc:.2f}_budget"
 
         print(
-            f"Dataset {dataset.id[-10:]} Budget {perc * 100}% - Launching model selection"
+            f"Dataset {dataset_id[-10:]} Budget {perc * 100}% - Launching model selection"
         )
 
         with Timer() as t:
@@ -96,7 +96,7 @@ def model_selection_precomp_kernel(
             )
             best_model, params, score = None, None, 0
             try:
-                cvgrid.fit(precomputed_X_train, y_train, solver=solver)
+                cvgrid.fit(precomputed_X_train, y_train)#, solver=solver)
                 test_score = cvgrid.score(precomputed_X_test, y_test)
                 best_model, params, score = (
                     cvgrid.best_estimator_,
@@ -111,13 +111,13 @@ def model_selection_precomp_kernel(
 
         if best_model is None:
             if best_sv_number is None:
-                return [] # model selection failed on regular unconstrained model
+                return # model selection failed on regular unconstrained model
 
             # a budget constrained model selection failed. Continue and try another budget value
             continue
 
         print(
-            f"Dataset {dataset.id[-10:]} Budget {perc * 100}% - "
+            f"Dataset {dataset_id[-10:]} Budget {perc * 100}% - "
             f"Model selection took {t.time} seconds"
         )
 
@@ -128,9 +128,9 @@ def model_selection_precomp_kernel(
             best_model.optimal_ = False
 
         best_model_uuid = uuid.uuid4()
-        results.append(
+        queue.put([
             {
-                "dataset": dataset.id,
+                "dataset": dataset_id,
                 "model_UUID": best_model_uuid,
                 "model": best_model,
                 "model_name": model_name,
@@ -141,13 +141,13 @@ def model_selection_precomp_kernel(
                 "num_sv": len(best_model.alpha_) if best_model else None,
                 "train_time": t.time,
             }
-        )
+        ])
 
         # if current trained model is full budget save the number of sv.
         if not best_sv_number:
             best_sv_number = len(best_model.alpha_)
 
-    return results
+    # del solver.env
 
 
 def process_dataset(dataset, cfg) -> list[dict]:
@@ -155,9 +155,9 @@ def process_dataset(dataset, cfg) -> list[dict]:
     Foreach parameter train a model on dataset and return the best performing model
     """
     print(f"Processing dataset {dataset.id}")
-    executor = ProcessPoolExecutor(max_workers=os.cpu_count())
-    futures = []
-    print(f"using an executor with {executor._max_workers} workers")
+
+    processes = []
+    results_queue = Queue()
 
     for kernel_name, kernel_parameters in cfg["model_selection"]["kernels"].items():
         # linear kernel has no parameters
@@ -185,27 +185,45 @@ def process_dataset(dataset, cfg) -> list[dict]:
                 ]
             )
 
-            futures.append(executor.submit(
-                model_selection_precomp_kernel,
-                dataset.id,
-                precomputed_X_train,
-                precomputed_X_test,
-                dataset.y_train,
-                dataset.y_test,
-                kernel,
-                config["model_selection"]["cv"],
-                config["model_selection"]["C"],
-                config["budget_percentages"],
-            ))
+            processes.append(
+                Process(
+                    target=model_selection_precomp_kernel,
+                    args=(
+                        dataset.id,
+                        precomputed_X_train,
+                        precomputed_X_test,
+                        dataset.y_train,
+                        dataset.y_test,
+                        kernel,
+                        config["model_selection"]["cv"],
+                        config["model_selection"]["C"],
+                        config["budget_percentages"],
+                        results_queue
+                    ),
+                )
+            )
 
-    # blocks until all tasks are completed
-    executor.shutdown(wait=True)
+    max_concurrent_processes = os.cpu_count()
+    # for i in range(0,len(processes), max_concurrent_processes):
+    #     for p in processes[i: i+max_concurrent_processes]:
+    #         p.start()
+    #     for p in processes[i: i + max_concurrent_processes]:
+    #         p.join()
 
-    results = []
-    for ft in futures:
-        results.extend(ft.result())
+    running = []
+    while len(processes) or len(running):
+        for rp in running:
+            rp.join(0)
+            if not rp.is_alive():
+                # process done
+                running.remove(rp)
+        if len(running) < max_concurrent_processes and len(processes):
+            new_p = processes.pop()
+            new_p.start()
+            running.append(new_p)
+
+    results = results_queue.get()
     return results
-    #return reduce(lambda r, n: r.extend(n.result), futures, [])
 
 
 def get_datasets(cfg):
@@ -215,30 +233,31 @@ def get_datasets(cfg):
 
     if "sinusoid" in cfg:
         rng = np.random.default_rng(0)
-        seeds = rng.integers(0, high=2 ** 32 - 1, size=n_try_different_seed)
+        seeds = rng.integers(0, high=2**32 - 1, size=n_try_different_seed)
         for base_params, seed, r, p in it.product(
-                cfg["sinusoid"], seeds, r_values, p_values
+            cfg["sinusoid"], seeds, r_values, p_values
         ):
             yield get_sinusoid_dataset(r=r, p=p, seed=seed, **base_params)
 
     if "pacman" in cfg:
         rng = np.random.default_rng(0)
-        seeds = rng.integers(0, high=2 ** 32 - 1, size=n_try_different_seed)
+        seeds = rng.integers(0, high=2**32 - 1, size=n_try_different_seed)
         for base_params, seed, r, p in it.product(
-                cfg["pacman"], seeds, r_values, p_values
+            cfg["pacman"], seeds, r_values, p_values
         ):
             yield get_pacman_dataset(r=r, p=p, seed=seed, **base_params)
 
     if "skl_classification" in cfg:
         rng = np.random.default_rng(0)
-        seeds = rng.integers(0, high=2 ** 32 - 1, size=n_try_different_seed)
+        seeds = rng.integers(0, high=2**32 - 1, size=n_try_different_seed)
         for base_params, seed, r, p in it.product(
-                cfg["skl_classification"], seeds, r_values, p_values
+            cfg["skl_classification"], seeds, r_values, p_values
         ):
             yield get_skl_classification_dataset(r=r, p=p, seed=seed, **base_params)
 
 
 if __name__ == "__main__":
+    multiprocessing.set_start_method("spawn")
     with Timer() as main_timer:
         CWD = pathlib.Path(os.path.dirname(__file__)).absolute()
 
@@ -248,7 +267,7 @@ if __name__ == "__main__":
         NOW = time.time()
         OUT_FILE_PATH = pathlib.Path(BASE_DIR_PATH / f"{NOW}.json")
 
-        with open(pathlib.Path(CWD / "experiment_config.json"), "rb") as f:
+        with open(pathlib.Path(CWD / "dev_exp_config_small.json"), "rb") as f:
             config = json.load(f)
 
         print(
@@ -265,6 +284,7 @@ if __name__ == "__main__":
         for dataset in get_datasets(config["datasets"]):
             res.extend(process_dataset(dataset, config))
 
+        print(res)
         print("Saving models on disk")
         pathlib.Path(BASE_DIR_PATH / "models").mkdir(exist_ok=True)
         for r in res:
@@ -276,9 +296,12 @@ if __name__ == "__main__":
                 pickle.dump(model, f)
 
         print("Saving results on disk")
+        print(res)
         with open(OUT_FILE_PATH, "w+") as f:
             f.write(json.dumps(res, cls=CustomJSONEncoder))
 
-        print(res)
-
     print(f"Done in {main_timer.time}")
+
+experiments / results / 1685449053.3788764.json
+experiments / results / 1685455690.3525748.json
+experiments / results / 1685626882.9574878.json

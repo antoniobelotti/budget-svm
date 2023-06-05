@@ -1,18 +1,18 @@
 {
     "datasets": {
         "pacman": [
-            {"a": 0.1, "gamma": 10},
             {"a": 0.5, "gamma": 10}
         ],
         "r_values": [0],
         "p_values": [1],
         "n_repeat_sampling": 1
     },
-    "budget_percentages": [1, 0.9, 0.8, 0.7],
+    "budget_percentages": [1, 0.9],
     "model_selection": {
-        "C": [0.1, 1, 10, 100],
+        "cv": 2,
+        "C": [0.1, 1, 10],
         "kernels": {
-            "gaussian": [0.00001, 0.0001, 0.001, 0.01, 0.1, 1],
+            "gaussian": [0.01, 0.1, 1],
             "linear": null
         }
     }

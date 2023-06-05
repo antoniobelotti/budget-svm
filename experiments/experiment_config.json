@@ -1,17 +1,16 @@
 {
     "datasets": {
-        "pacman": [
-            {"dim":3, "n":8000, "a": 0.1, "gamma": 10},
-            {"dim":3, "n":8000, "a": 0.5, "gamma": 10},
-            {"dim":3, "n":8000, "a": 1, "gamma": 10}
+        "sinusoid": [
+            {"n":1000, "beta": 0, "rho": 0.1, "theta": 20},
+            {"n":1000, "beta": 0, "rho": 0.3, "theta": 20}
         ],
         "r_values": [0],
         "p_values": [1],
-        "n_repeat_sampling": 1
+        "n_repeat_sampling": 3
     },
-    "budget_percentages": [1, 0.9, 0.8, 0.7, 0.6, 0.5],
+    "budget_percentages": [1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3],
     "model_selection": {
-        "cv": 3,
+        "cv": 5,
         "C": [0.1, 1, 10, 100],
         "kernels": {
             "gaussian": [0.00001, 0.0001, 0.001, 0.01, 0.1, 1],
