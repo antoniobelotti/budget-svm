@@ -59,7 +59,7 @@ def model_selection_precomp_kernel(
     seed: int = 42
 ):
     print(f"model selection on dataset {dataset_id} with kernel {kernel}")
-    # solver = ReusableGurobiSolver()
+    solver = ReusableGurobiSolver()
 
     best_sv_number = None
     prev_budget = None
@@ -96,7 +96,7 @@ def model_selection_precomp_kernel(
             )
             best_model, params, score = None, None, 0
             try:
-                cvgrid.fit(precomputed_X_train, y_train)#, solver=solver)
+                cvgrid.fit(precomputed_X_train, y_train, solver=solver)
                 test_score = cvgrid.score(precomputed_X_test, y_test)
                 best_model, params, score = (
                     cvgrid.best_estimator_,
@@ -147,7 +147,7 @@ def model_selection_precomp_kernel(
         if not best_sv_number:
             best_sv_number = len(best_model.alpha_)
 
-    # del solver.env
+    del solver.env
 
 
 def process_dataset(dataset, cfg) -> list[dict]:
@@ -301,7 +301,3 @@ if __name__ == "__main__":
             f.write(json.dumps(res, cls=CustomJSONEncoder))
 
     print(f"Done in {main_timer.time}")
-
-experiments / results / 1685449053.3788764.json
-experiments / results / 1685455690.3525748.json
-experiments / results / 1685626882.9574878.json
