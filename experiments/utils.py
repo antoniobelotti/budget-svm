@@ -14,7 +14,7 @@ from budgetsvm.kernel import GaussianKernel, Kernel, PolynomialKernel, LinearKer
 
 class CustomJSONEncoder(json.JSONEncoder):
     def default(self, obj):
-        if isinstance(obj, Kernel):
+        if "kernel" in type(obj).__name__.lower():
             return str(obj)
         if isinstance(obj, UUID):
             return str(obj)
