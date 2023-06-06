@@ -13,7 +13,7 @@ from budgetsvm.svm import SVC
 from experiments.main import get_datasets
 from experiments.utils import Timer, CustomJSONEncoder
 from kernel import LinearKernel, GaussianKernel, PolynomialKernel
-from optimization import ReusableGurobiSolver
+from optimization import GurobiSolver
 
 CWD = pathlib.Path(os.path.dirname(__file__)).absolute()
 BASE_DIR_PATH = pathlib.Path(CWD / "results")
@@ -68,12 +68,12 @@ for ds in get_datasets(config["datasets"]):
     for params in grid_params:
         logging.debug(f"Dataset {ds.id[-10:]} params {params} ")
         logging.debug("training unconstrained model")
-        unconstrained_model_solver = ReusableGurobiSolver()
+        unconstrained_model_solver = GurobiSolver()
         with Timer() as t:
             unconstrained_model = SVC(**params)
             try:
                 unconstrained_model.fit(
-                    ds.X_train, ds.y_train, solver=unconstrained_model_solver
+                    ds.X_train, ds.y_train, solver=unconstrained_model_solver, keep_alpha_equal_C=True
                 )
                 score = unconstrained_model.score(ds.X_test, ds.y_test)
             except:
@@ -98,17 +98,19 @@ for ds in get_datasets(config["datasets"]):
                 if unconstrained_model
                 else False,
                 "train_time": t.time,
+                "a_eq_c": len(unconstrained_model.alpha_eq_c_),
+                "a_lt_c": len(unconstrained_model.alpha_lt_c_)
             }
         )
         logging.debug(f"unconstrained model has {len(unconstrained_model.alpha_)} SV")
         logging.debug(f"training model with budget={len(unconstrained_model.alpha_)}")
         budget = len(unconstrained_model.alpha_)
 
-        budgeted_model_solver = ReusableGurobiSolver()
+        budgeted_model_solver = GurobiSolver()
         with Timer() as t:
             budgeted_model = SVC(budget=budget, **params)
             try:
-                budgeted_model.fit(ds.X_train, ds.y_train, solver=budgeted_model_solver)
+                budgeted_model.fit(ds.X_train, ds.y_train, solver=budgeted_model_solver, keep_alpha_equal_C=True)
                 score = budgeted_model.score(ds.X_test, ds.y_test)
             except:
                 budgeted_model = None
@@ -127,6 +129,8 @@ for ds in get_datasets(config["datasets"]):
                 "budget": budget,
                 "optimal": budgeted_model.optimal_ if budgeted_model else False,
                 "train_time": t.time,
+                "a_eq_c": len(unconstrained_model.alpha_eq_c_),
+                "a_lt_c": len(unconstrained_model.alpha_lt_c_)
             }
         )
         logging.debug(f"done for dataset {ds.id[-10:]}")
@@ -142,8 +146,8 @@ for ds in get_datasets(config["datasets"]):
             logging.error(
                 f"both optimal, different obj fun value. models:[\n\tunconstr: {unconstrained_model_uuid}\n\tbudgeted: {budgeted_model_uuid}\n]"
             )
-            unconstrained_model_solver.model.write(f"{unconstrained_model_uuid}.lp")
-            budgeted_model_solver.model.write(f"{budgeted_model_uuid}.lp")
+            #unconstrained_model_solver.model.write(f"{unconstrained_model_uuid}.lp")
+            #budgeted_model_solver.model.write(f"{budgeted_model_uuid}.lp")
 
 
 logging.info("Saving results on disk")

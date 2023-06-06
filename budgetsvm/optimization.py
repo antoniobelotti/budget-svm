@@ -111,12 +111,12 @@ class Solver(ABC):
         y = np.array(y)
 
         solve_fn = self.solve_dispatch[self.problem]
-        solution, optimal = solve_fn(X, y, C=C, kernel=kernel, budget=budget, **kwargs)
+        solution, optimal, abs_mip_gap = solve_fn(X, y, C=C, kernel=kernel, budget=budget, **kwargs)
 
         clip_fn = self.clip_dispatch[self.problem]
         optimal_values = clip_fn(solution, budget, C)
 
-        return optimal_values, optimal
+        return optimal_values, optimal, abs_mip_gap
 
 
 class GurobiSolver(Solver):
@@ -257,7 +257,8 @@ class GurobiSolver(Solver):
 
                 solution = (alpha_opt, gamma_opt) if budget is not None else alpha_opt
 
-                return np.array(solution), model.Status == GRB.OPTIMAL
+                mip_gap = 0 if np.isclose(model.Params.MIPGap, 0, atol=1e-4, rtol=0) else model.Params.MIPGap
+                return np.array(solution), model.Status == GRB.OPTIMAL, mip_gap
 
     def solve_regression_problem(
         self, X, y, C=1, kernel=GaussianKernel(), epsilon=0.1, budget=None

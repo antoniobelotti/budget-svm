@@ -17,7 +17,6 @@ warnings.warn = warn
 
 import itertools as it
 import logging
-import datetime
 import json
 import math
 import os
@@ -89,6 +88,8 @@ def task_experiment_on_dataset(dataset, cfg):
                 "budget": budget if budget else math.inf,
                 "num_sv": len(best_model.alpha_) if best_model else None,
                 "train_time": t.time,
+                "a_eq_c": len(best_model.alpha_eq_c_) if best_model else 0,
+                "a_lt_c": len(best_model.alpha_lt_c_) if best_model else 0
             }
         )
 
