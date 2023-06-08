@@ -98,7 +98,7 @@ class SVC(ClassifierMixin, BaseEstimator):
 
         # keep track to see how many alpha==C
         self.alpha_eq_c_ = alpha[alpha == self.C]
-        self.alpha_lt_c_ = alpha[alpha < self.C]
+        self.alpha_lt_c_ = alpha[(alpha > 0) & (alpha < self.C)]
 
         if not self.kernel.precomputed:
             self.X_ = X[sv_mask]
