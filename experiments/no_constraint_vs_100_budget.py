@@ -11,33 +11,31 @@ from sklearn.model_selection import ParameterGrid
 
 from budgetsvm.svm import SVC
 from experiments.main import get_datasets
+from experiments.storage.GDriveStorage import GDriveStorage
 from experiments.utils import Timer, CustomJSONEncoder
 from kernel import LinearKernel, GaussianKernel, PolynomialKernel
 from optimization import GurobiSolver
 
 CWD = pathlib.Path(os.path.dirname(__file__)).absolute()
-BASE_DIR_PATH = pathlib.Path(CWD / "results")
-BASE_DIR_PATH.mkdir(parents=True, exist_ok=True)
-
-NOW = time.time()
-OUT_FILE_PATH = pathlib.Path(BASE_DIR_PATH / f"{NOW}_100per_budget_no_cv.json")
-DESCRIPTION_FILE_PATH = pathlib.Path(
-    BASE_DIR_PATH / f"{NOW}_100per_budget_no_cv.description"
-)
+EXPERIMENT_ID = str(time.time()) + "_100per_budget_no_cv"
+TMP_LOG_FILE_PATH = CWD / f"{EXPERIMENT_ID}.log"
 
 with open(pathlib.Path(CWD / "100_budget_config.json"), "rb") as f:
     config = json.load(f)
 
-logging.basicConfig(
-    level=logging.DEBUG,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[
-        logging.FileHandler(BASE_DIR_PATH / f"{NOW}_100per_budget_no_cv.log"),
-        logging.StreamHandler(),
-    ],
-)
+logger = logging.getLogger("experiments")
+logger.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s - %(name)s[%(levelname)s] \t%(message)s')
+sh = logging.StreamHandler()
+sh.setFormatter(formatter)
 
-logging.info(
+fh = logging.FileHandler(TMP_LOG_FILE_PATH)
+fh.setFormatter(formatter)
+
+logger.addHandler(sh)
+logger.addHandler(fh)
+
+logger.info(
     textwrap.dedent(
         f"""
             Running experiment with the following configuration:
@@ -47,9 +45,11 @@ logging.info(
     )
 )
 
+storage = GDriveStorage()
+
 results = []
-for ds in get_datasets(config["datasets"]):
-    logging.info(f"Starting on dataset {ds.id}")
+for ds in get_datasets(config["datasets"], storage):
+    logger.info(f"Starting on dataset {ds.id}")
 
     c_values = config["model_selection"].get("C", [1.0])
 
@@ -66,8 +66,8 @@ for ds in get_datasets(config["datasets"]):
 
     grid_params = ParameterGrid({"C": c_values, "kernel": kernel_values})
     for params in grid_params:
-        logging.debug(f"Dataset {ds.id[-10:]} params {params} ")
-        logging.debug("training unconstrained model")
+        logger.debug(f"Dataset {ds.id[-10:]} params {params} ")
+        logger.debug("training unconstrained model")
         unconstrained_model_solver = GurobiSolver()
         with Timer() as t:
             unconstrained_model = SVC(**params)
@@ -99,11 +99,12 @@ for ds in get_datasets(config["datasets"]):
                 else False,
                 "train_time": t.time,
                 "a_eq_c": len(unconstrained_model.alpha_eq_c_),
-                "a_lt_c": len(unconstrained_model.alpha_lt_c_)
+                "a_lt_c": len(unconstrained_model.alpha_lt_c_),
+                "mip_gap": unconstrained_model.mip_gap
             }
         )
-        logging.debug(f"unconstrained model has {len(unconstrained_model.alpha_)} SV")
-        logging.debug(f"training model with budget={len(unconstrained_model.alpha_)}")
+        logger.debug(f"unconstrained model has {len(unconstrained_model.alpha_)} SV")
+        logger.debug(f"training model with budget={len(unconstrained_model.alpha_)}")
         budget = len(unconstrained_model.alpha_)
 
         budgeted_model_solver = GurobiSolver()
@@ -129,12 +130,13 @@ for ds in get_datasets(config["datasets"]):
                 "budget": budget,
                 "optimal": budgeted_model.optimal_ if budgeted_model else False,
                 "train_time": t.time,
-                "a_eq_c": len(unconstrained_model.alpha_eq_c_),
-                "a_lt_c": len(unconstrained_model.alpha_lt_c_)
+                "a_eq_c": len(budgeted_model.alpha_eq_c_),
+                "a_lt_c": len(budgeted_model.alpha_lt_c_),
+                "mip_gap": budgeted_model.mip_gap
             }
         )
-        logging.debug(f"done for dataset {ds.id[-10:]}")
-        logging.debug(f"unconstrained model has {len(unconstrained_model.alpha_)} SV")
+        logger.debug(f"done for dataset {ds.id[-10:]}")
+        logger.debug(f"unconstrained model has {len(budgeted_model.alpha_)} SV")
 
         if (
             unconstrained_model
@@ -143,15 +145,19 @@ for ds in get_datasets(config["datasets"]):
             and budgeted_model.optimal_
             and unconstrained_model.obj_ != budgeted_model.obj_
         ):
-            logging.error(
+            logger.error(
                 f"both optimal, different obj fun value. models:[\n\tunconstr: {unconstrained_model_uuid}\n\tbudgeted: {budgeted_model_uuid}\n]"
             )
+            # TODO: use storage
             #unconstrained_model_solver.model.write(f"{unconstrained_model_uuid}.lp")
             #budgeted_model_solver.model.write(f"{budgeted_model_uuid}.lp")
 
+storage.save_results(results, EXPERIMENT_ID)
 
-logging.info("Saving results on disk")
-with open(OUT_FILE_PATH, "w+") as f:
-    f.write(json.dumps(results, cls=CustomJSONEncoder))
+logger.info("Done")
 
-logging.info("Done")
+
+logger.removeHandler(fh)
+fh.close()
+
+storage.save_log(TMP_LOG_FILE_PATH, EXPERIMENT_ID)
