@@ -17,7 +17,7 @@ from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
 from experiments.storage.Storage import Storage
 from experiments.synthetic_datasets.Dataset import Dataset
 from experiments.utils import CustomJSONEncoder
-from svm import SVC
+from budgetsvm.svm import SVC
 
 
 class GDriveStorage(Storage):

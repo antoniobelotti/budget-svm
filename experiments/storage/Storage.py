@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Protocol, Optional
 
 from experiments.synthetic_datasets.Dataset import Dataset
-from svm import SVC
+from budgetsvm.svm import SVC
 
 
 class Storage(Protocol):
