@@ -86,8 +86,11 @@ def task_experiment_on_dataset(dataset, cfg):
                 "budget": budget if budget else math.inf,
                 "num_sv": len(best_model.alpha_) if best_model else None,
                 "train_time": t.time,
-                "a_eq_c": len(best_model.alpha_eq_c_) if best_model else 0,
-                "a_lt_c": len(best_model.alpha_lt_c_) if best_model else 0,
+                "s_pos": best_model.s_pos_ if best_model else 0,
+                "s_neg": best_model.s_neg_ if best_model else 0,
+                "b_pos": best_model.b_pos_ if best_model else 0,
+                "b_neg": best_model.b_neg_ if best_model else 0,
+                "mip_gap": best_model.mip_gap_ if best_model else math.inf
             }
         )
 

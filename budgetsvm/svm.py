@@ -84,7 +84,7 @@ class SVC(ClassifierMixin, BaseEstimator):
         )
 
         self.obj_ = solver.obj_val
-        self.mip_gap = mip_gap
+        self.mip_gap_ = mip_gap
 
         if keep_alpha_equal_C:
             sv_mask = (0 < alpha) & (alpha <= self.C)
@@ -96,9 +96,14 @@ class SVC(ClassifierMixin, BaseEstimator):
 
         self.alpha_ = alpha[sv_mask]
 
-        # keep track to see how many alpha==C
-        self.alpha_eq_c_ = alpha[alpha == self.C]
-        self.alpha_lt_c_ = alpha[(alpha > 0) & (alpha < self.C)]
+        # track how many alpha==C and 0<alpha<C
+        s = y[alpha == self.C]
+        self.s_pos_ = len(s[s == 1])
+        self.s_neg_ = len(s[s == -1])
+
+        b = y[(alpha > 0) & (alpha < self.C)]
+        self.b_pos_ = len(b[b == 1])
+        self.b_neg_ = len(b[b == -1])
 
         if not self.kernel.precomputed:
             self.X_ = X[sv_mask]

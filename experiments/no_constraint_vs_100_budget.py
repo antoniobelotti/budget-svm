@@ -98,9 +98,11 @@ for ds in get_datasets(config["datasets"], storage):
                 if unconstrained_model
                 else False,
                 "train_time": t.time,
-                "a_eq_c": len(unconstrained_model.alpha_eq_c_),
-                "a_lt_c": len(unconstrained_model.alpha_lt_c_),
-                "mip_gap": unconstrained_model.mip_gap
+                "s_pos": unconstrained_model.s_pos_ if unconstrained_model else 0,
+                "s_neg": unconstrained_model.s_neg_ if unconstrained_model else 0,
+                "b_pos": unconstrained_model.b_pos_ if unconstrained_model else 0,
+                "b_neg": unconstrained_model.b_neg_ if unconstrained_model else 0,
+                "mip_gap": unconstrained_model.mip_gap_
             }
         )
         logger.debug(f"unconstrained model has {len(unconstrained_model.alpha_)} SV")
@@ -130,9 +132,11 @@ for ds in get_datasets(config["datasets"], storage):
                 "budget": budget,
                 "optimal": budgeted_model.optimal_ if budgeted_model else False,
                 "train_time": t.time,
-                "a_eq_c": len(budgeted_model.alpha_eq_c_),
-                "a_lt_c": len(budgeted_model.alpha_lt_c_),
-                "mip_gap": budgeted_model.mip_gap
+                "s_pos": budgeted_model.s_pos_ if budgeted_model else 0,
+                "s_neg": budgeted_model.s_neg_ if budgeted_model else 0,
+                "b_pos": budgeted_model.b_pos_ if budgeted_model else 0,
+                "b_neg": budgeted_model.b_neg_ if budgeted_model else 0,
+                "mip_gap": budgeted_model.mip_gap_
             }
         )
         logger.debug(f"done for dataset {ds.id[-10:]}")
