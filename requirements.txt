@@ -1,3 +1,8 @@
+google_api_python_client==2.88.0
+google_auth_oauthlib==1.0.0
 gurobipy==10.0.1
 numpy==1.23.5
+problexity==0.5.6
+protobuf==4.23.2
 scikit_learn==1.2.2
+setuptools==65.6.3
