@@ -182,10 +182,10 @@ class GurobiSolver(Solver):
 
         with Env(empty=True) as env:
             env.setParam("LogToConsole", 0)
-            env.setParam("LogFile", "gurobi.log")
             env.start()
             with Model("svc", env=env) as model:
                 model.setParam("LogToConsole", 0)
+                model.setParam("NonConvex", 2)
                 model.setParam("TimeLimit", self.time_limit)
 
                 model.addVars(list(range(m)), lb=0, ub=C, vtype=GRB.CONTINUOUS)
@@ -411,7 +411,6 @@ class ReusableGurobiSolver(Solver):
         self.env = Env(empty=True)
         self.env.setParam("LogToConsole", 0)
         self.env.setParam("MIPGapAbs", 0.05)
-        self.env.setParam("LogFile", "gurobi.log")
 
         self.model = None
         self.m = None
