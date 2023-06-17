@@ -50,7 +50,7 @@ def run_cvgrid(
         refit=True,
         verbose=0,
         cv=skf,
-        n_jobs=-1,
+        n_jobs=10,
     )
     try:
         cvgrid.fit(precomputed_X_train, y_train)

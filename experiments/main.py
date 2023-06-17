@@ -130,7 +130,7 @@ if __name__ == "__main__":
     EXPERIMENT_ID = str(time.time())
     TMP_LOG_FILE_PATH = CWD / f"{EXPERIMENT_ID}.log"
 
-    with open(pathlib.Path(CWD / "dev_exp_config_small.json"), "rb") as f:
+    with open(pathlib.Path(CWD / "experiment_config.json"), "rb") as f:
         config = json.load(f)
 
     logger = logging.getLogger("experiments")
