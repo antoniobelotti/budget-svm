@@ -28,8 +28,8 @@ class GDriveStorage(Storage):
     TOKEN_PATH: Path = Path.home() / "gdrive_budgetsvm_token.json"
     FOLDERS = ["models", "datasets", "results", "logs"]
 
-    credentials: Credentials
-    service: Resource
+    credentials: Credentials = None
+    service: Resource = None
     folder_id_map: dict[str, str] = {}
 
     def __init__(self):
