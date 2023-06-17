@@ -39,10 +39,14 @@ class BaseDatasetBuilder(ABC):
         dim: int = 2,
         **kwargs,
     ) -> Dataset:
-        bound = inspect.signature(self.build).bind(**kwargs)
+        bound = inspect.signature(self.build).bind(
+            n, r, p, seed, test_size, dim, **kwargs
+        )
         bound.apply_defaults()
-        binded_kwargs = bound.arguments.pop("kwargs")
+        dataset_generation_parameters = bound.arguments
+        binded_kwargs = dataset_generation_parameters.pop("kwargs")
         dataset_generation_parameters = {**bound.arguments, **binded_kwargs}
+
         params_str = str(sorted(dataset_generation_parameters.items())).encode("utf-8")
 
         dataset_hash = hashlib.md5(params_str).hexdigest()
