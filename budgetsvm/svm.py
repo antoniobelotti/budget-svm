@@ -79,7 +79,7 @@ class SVC(ClassifierMixin, BaseEstimator):
 
         y = self.__vec_encode_label(y)
 
-        alpha, optimal, mip_gap = solver.solve(
+        alpha, solver_status, mip_gap = solver.solve(
             X, y, C=self.C, kernel=self.kernel, budget=self.budget
         )
 
@@ -127,7 +127,7 @@ class SVC(ClassifierMixin, BaseEstimator):
         if warn and np.std(bs) > 1e-4:
             print("warning: computed values for b are", bs)
 
-        self.optimal_ = optimal
+        self.solver_status_ = solver_status
         return self
 
     def __dotprod(self, x_new):

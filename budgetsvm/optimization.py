@@ -258,7 +258,7 @@ class GurobiSolver(Solver):
                 solution = (alpha_opt, gamma_opt) if budget is not None else alpha_opt
 
                 mip_gap = 0 if np.isclose(model.Params.MIPGap, 0, atol=1e-4, rtol=0) else model.Params.MIPGap
-                return np.array(solution), model.Status == GRB.OPTIMAL, mip_gap
+                return np.array(solution), model.Status, mip_gap
 
     def solve_regression_problem(
         self, X, y, C=1, kernel=GaussianKernel(), epsilon=0.1, budget=None

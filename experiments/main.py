@@ -80,7 +80,7 @@ def task_experiment_on_dataset(dataset, cfg):
                 "model_UUID": best_model_uuid,
                 "model": best_model,
                 "model_name": model_name,
-                "optimal": best_model.optimal_ if best_model else None,
+                "solver_status": best_model.solver_status_ if best_model else None,
                 "params": params,
                 "score": score,
                 "budget": budget if budget else math.inf,
