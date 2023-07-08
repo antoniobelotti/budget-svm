@@ -1,7 +1,9 @@
-from typing import Tuple, Callable
+import functools
+from typing import Callable
 
 import numpy as np
 import numpy.typing as npt
+from sklearn.preprocessing import MinMaxScaler
 
 from experiments.storage.Storage import Storage
 from experiments.synthetic_datasets.BaseDatasetBuilder import BaseDatasetBuilder
@@ -21,8 +23,9 @@ class PacmanDatasetBuilder(BaseDatasetBuilder):
             mean, cov, population_size, check_valid="raise"
         )
 
-        # scale values
-        pop = (2 * (pop - np.min(pop)) / (np.max(pop) - np.min(pop))) - 1
+        if kwargs.get("scale_min_max", False):
+            # scale between 0 and 1
+            pop = MinMaxScaler().fit_transform(pop)
 
         return pop
 
@@ -32,13 +35,28 @@ class PacmanDatasetBuilder(BaseDatasetBuilder):
 
         alpha = kwargs.get("a")
 
-        def labeling_fn(*coord):
-            y = coord[-1] - sum((alpha * x) ** 2 for x in coord[:-1])
+        def labeling_fn(x_shift, y_shift, *coord):
+            # coord = (
+            #   [x1,x1,x1,x1],
+            #   [x2,x2,x2,x2],
+            #   [x3,x3,x3,x3],
+            # )
+            #   x_d = a(x1-0.5)**2 + a(x2-0.5)**2 + ... + a(x_{d-1} -0.5)**2  + 0.5
+            #              ^                                                    ^
+            #        shift -> on x axis                                   shift up on y axis
+            #
+            #   ==> vertex on (0.5,0.5)
+
+            y = coord[-1] - np.sum(alpha * ((np.array(coord[:-1]) - x_shift) ** 2), axis=0) - y_shift
             y[y > 0] = 1
             y[y <= 0] = -1
             return y
 
-        return labeling_fn
+        x_shift, y_shift = 0, 0
+        if kwargs.get("scale_min_max", False):
+            x_shift, y_shift = 0.5, 0.5
+            
+        return functools.partial(labeling_fn, x_shift, y_shift)
 
     def __init__(self, storage: Storage):
         super().__init__(storage)

@@ -6,12 +6,32 @@ from experiments.synthetic_datasets.PacmanDatasetBuilder import PacmanDatasetBui
 
 class TestPacmanDatasetBuilder(unittest.TestCase):
     def test_different_params_creates_different_hash(self):
-        pl1 = {"n": 2000, "a": 0.10, "gamma": 10}
-        pl2 = {"n":  500, "a": 0.10, "gamma": 10}
+        table = [
+            {"n": 20, "a": 0.10, "gamma": 10},
+            {"n": 50, "a": 0.10, "gamma": 10},
+            {"n": 50, "a": 0.10, "gamma": 10, "scale_min_max": True},
+        ]
+
         storage = DummyStorage()
-
         dsb = PacmanDatasetBuilder(storage)
-        ds1 = dsb.build(**pl1)
-        ds2 = dsb.build(**pl2)
 
-        self.assertNotEqual(ds1.id, ds2.id)
+        ids = [ds.id for ds in [dsb.build(**params) for params in table]]
+
+        self.assertEqual(sorted(ids), sorted(list(set(ids))))
+
+    def test_min_max_scaled_dataset_generation(self):
+        not_scaled_params = {"n": 20, "a": 0.10, "gamma": 10}
+        scaled_params = {"n": 20, "a": 0.10, "gamma": 10, "scale_min_max": True}
+
+        storage = DummyStorage()
+        dsb = PacmanDatasetBuilder(storage)
+
+        not_scaled_ds = dsb.build(**not_scaled_params)
+        scaled_ds = dsb.build(**scaled_params)
+
+        # scaled range is [0,1]
+        self.assertLessEqual(0.0, scaled_ds.X.min())
+        self.assertGreaterEqual(1.0, scaled_ds.X.min())
+
+        # not scaled range depends on gamma.
+        self.assertGreater(not_scaled_ds.X.max() - not_scaled_ds.X.min(), 1)

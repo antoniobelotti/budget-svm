@@ -15,10 +15,11 @@
             {"n":1000, "beta": 0, "rho": 0.1, "theta": 10}
         ],
         "pacman": [
-            {"n":1000, "a": 0.10, "gamma": 10},
-            {"n":1000, "a": 1.00, "gamma": 10},
-            {"n":1000, "a": 3.00, "gamma": 10},
-            {"n":1000, "a": 5.00, "gamma": 10}
+            {"scale_min_max":true, "n":1000, "a": 1.0, "gamma": 10},
+            {"scale_min_max":true, "n":1000, "a": 2.5, "gamma": 10},
+            {"scale_min_max":true, "n":1000, "a": 5.0, "gamma": 10},
+            {"scale_min_max":true, "n":1000, "a": 7.5, "gamma": 10},
+            {"scale_min_max":true, "n":1000, "a": 10.0, "gamma": 10}
         ],
         "r_values": [0],
         "p_values": [1],
