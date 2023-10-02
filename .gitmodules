@@ -1,0 +1,3 @@
+[submodule "experiments/comparisons/NSSVM"]
+	path = experiments/comparisons/NSSVM
+	url = https://github.com/ShenglongZhou/NSSVM.git
