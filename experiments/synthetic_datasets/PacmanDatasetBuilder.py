@@ -10,7 +10,7 @@ from experiments.synthetic_datasets.BaseDatasetBuilder import BaseDatasetBuilder
 
 
 class PacmanDatasetBuilder(BaseDatasetBuilder):
-    def get_population(self, population_size: int, **kwargs) -> npt.ArrayLike:
+    def get_population(self, population_size: int, **kwargs) -> npt.NDArray[float]:
         if "gamma" not in kwargs:
             raise ValueError("specify 'gamma' value for pacman dataset generation")
 
@@ -29,7 +29,7 @@ class PacmanDatasetBuilder(BaseDatasetBuilder):
 
         return pop
 
-    def get_labeling_fn(self, **kwargs) -> Callable[[npt.ArrayLike], npt.ArrayLike]:
+    def get_labeling_fn(self, **kwargs) -> Callable[[npt.NDArray[float]], npt.NDArray[float]]:
         if "a" not in kwargs:
             raise ValueError("specify 'a' value for pacman dataset generation")
 

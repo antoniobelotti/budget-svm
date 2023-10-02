@@ -8,10 +8,10 @@ from experiments.synthetic_datasets.BaseDatasetBuilder import BaseDatasetBuilder
 
 
 class SinusoidDatasetBuilder(BaseDatasetBuilder):
-    def get_population(self, population_size: int, **kwargs) -> npt.ArrayLike:
+    def get_population(self, population_size: int, **kwargs) -> npt.NDArray[float]:
         return self.rng.uniform(size=(population_size, 2), low=0, high=1)
 
-    def get_labeling_fn(self, **kwargs) -> Callable[[npt.ArrayLike], npt.ArrayLike]:
+    def get_labeling_fn(self, **kwargs) -> Callable[[npt.NDArray[float]], npt.NDArray[float]]:
         if any(req_arg not in kwargs for req_arg in ["beta", "rho", "theta"]):
             raise ValueError("specify all 'beta', 'rho', 'theta' values for sinusoid dataset generation")
 

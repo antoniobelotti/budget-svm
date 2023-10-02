@@ -22,11 +22,11 @@ class BaseDatasetBuilder(ABC):
         self.storage = storage
 
     @abstractmethod
-    def get_population(self, population_size: int, **kwargs) -> npt.ArrayLike:
+    def get_population(self, population_size: int, **kwargs) -> npt.NDArray[float]:
         raise NotImplementedError
 
     @abstractmethod
-    def get_labeling_fn(self, **kwargs) -> Callable[[npt.ArrayLike], npt.ArrayLike]:
+    def get_labeling_fn(self, **kwargs) -> Callable[[npt.NDArray[float]], npt.NDArray[float]]:
         raise NotImplementedError
 
     def build(
