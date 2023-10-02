@@ -83,18 +83,19 @@ for ds in get_datasets(config["datasets"], storage):
         if unconstrained_model is None:
             continue
 
-        unconstrained_model_uuid = uuid.uuid4()
+        unconstrained_model_UUID = uuid.uuid4()
+        storage.save_model(unconstrained_model, str(unconstrained_model_UUID))
         results.append(
             {
                 "dataset": ds.id,
                 "model_name": "unconstrained",
-                "model_uuid": unconstrained_model_uuid,
+                "model_UUID": unconstrained_model_UUID,
                 "params": {k: str(v) for k, v in params.items()},
                 "score": score,
                 "obj_fn_value": unconstrained_model.obj_ if unconstrained_model else 0,
                 "num_sv": len(unconstrained_model.alpha_) if unconstrained_model else 0,
                 "budget": math.inf,
-                "optimal": unconstrained_model.optimal_
+                "solver_status": unconstrained_model.solver_status_
                 if unconstrained_model
                 else False,
                 "train_time": t.time,
@@ -119,18 +120,19 @@ for ds in get_datasets(config["datasets"], storage):
                 budgeted_model = None
                 score = 0
 
-        budgeted_model_uuid = uuid.uuid4()
+        budgeted_model_UUID = uuid.uuid4()
+        storage.save_model(budgeted_model, str(budgeted_model_UUID))
         results.append(
             {
                 "dataset": ds.id,
                 "model_name": "100perc_budget",
-                "model_uuid": budgeted_model_uuid,
+                "model_UUID": budgeted_model_UUID,
                 "params": {k: str(v) for k, v in params.items()},
                 "score": score,
                 "obj_fn_value": budgeted_model.obj_ if budgeted_model else 0,
                 "num_sv": len(budgeted_model.alpha_) if budgeted_model else 0,
                 "budget": budget,
-                "optimal": budgeted_model.optimal_ if budgeted_model else False,
+                "solver_status": budgeted_model.solver_status_ if budgeted_model else False,
                 "train_time": t.time,
                 "s_pos": budgeted_model.s_pos_ if budgeted_model else 0,
                 "s_neg": budgeted_model.s_neg_ if budgeted_model else 0,
@@ -150,11 +152,11 @@ for ds in get_datasets(config["datasets"], storage):
             and unconstrained_model.obj_ != budgeted_model.obj_
         ):
             logger.error(
-                f"both optimal, different obj fun value. models:[\n\tunconstr: {unconstrained_model_uuid}\n\tbudgeted: {budgeted_model_uuid}\n]"
+                f"both optimal, different obj fun value. models:[\n\tunconstr: {unconstrained_model_UUID}\n\tbudgeted: {budgeted_model_UUID}\n]"
             )
             # TODO: use storage
-            #unconstrained_model_solver.model.write(f"{unconstrained_model_uuid}.lp")
-            #budgeted_model_solver.model.write(f"{budgeted_model_uuid}.lp")
+            #unconstrained_model_solver.model.write(f"{unconstrained_model_UUID}.lp")
+            #budgeted_model_solver.model.write(f"{budgeted_model_UUID}.lp")
 
 storage.save_results(results, EXPERIMENT_ID)
 
