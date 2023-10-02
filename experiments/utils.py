@@ -80,73 +80,39 @@ def model_selection(model, X_train, X_test, y_train, y_test, cfg):
     best_estimator = None
     best_score = 0.0
     best_params = None
+
+    all_kernels = []
     for kernel_name, hp in cfg.get("kernels", {"linear"}).items():
         match kernel_name:
             case "linear":
-                kernel = PrecomputedKernel(original_kernel=LinearKernel())
-                precomputed_X_train = np.array(
-                    [[kernel.compute(x, y) for y in X_train] for x in X_train]
-                )
-                precomputed_X_test = np.array(
-                    [[kernel.compute(x, y) for y in X_train] for x in X_test]
-                )
-                est, par, score = run_cvgrid(
-                    model,
-                    precomputed_X_train,
-                    precomputed_X_test,
-                    y_train,
-                    y_test,
-                    kernel,
-                    cfg,
-                )
-                if score > best_score:
-                    best_estimator = est
-                    best_params = par
-                    best_score = score
+                all_kernels.append(PrecomputedKernel(original_kernel=LinearKernel()))
             case "gaussian":
                 for v in hp:
-                    kernel = PrecomputedKernel(original_kernel=GaussianKernel(v))
-                    precomputed_X_train = np.array(
-                        [[kernel.compute(x, y) for y in X_train] for x in X_train]
-                    )
-                    precomputed_X_test = np.array(
-                        [[kernel.compute(x, y) for y in X_train] for x in X_test]
-                    )
-                    est, par, score = run_cvgrid(
-                        model,
-                        precomputed_X_train,
-                        precomputed_X_test,
-                        y_train,
-                        y_test,
-                        kernel,
-                        cfg,
-                    )
-                    if score > best_score:
-                        best_estimator = est
-                        best_params = par
-                        best_score = score
+                    all_kernels.append(PrecomputedKernel(original_kernel=GaussianKernel(v)))
             case "polynomial":
                 for v in hp:
-                    kernel = PrecomputedKernel(original_kernel=PolynomialKernel(v))
-                    precomputed_X_train = np.array(
-                        [[kernel.compute(x, y) for y in X_train] for x in X_train]
-                    )
-                    precomputed_X_test = np.array(
-                        [[kernel.compute(x, y) for y in X_train] for x in X_test]
-                    )
-                    est, par, score = run_cvgrid(
-                        model,
-                        precomputed_X_train,
-                        precomputed_X_test,
-                        y_train,
-                        y_test,
-                        kernel,
-                        cfg,
-                    )
-                    if score > best_score:
-                        best_estimator = est
-                        best_params = par
-                        best_score = score
+                    all_kernels.append(PrecomputedKernel(original_kernel=PolynomialKernel(v)))
+
+    for krn in all_kernels:
+        precomputed_X_train = np.array(
+            [[krn.compute(x, y) for y in X_train] for x in X_train]
+        )
+        precomputed_X_test = np.array(
+            [[krn.compute(x, y) for y in X_train] for x in X_test]
+        )
+        est, par, score = run_cvgrid(
+            model,
+            precomputed_X_train,
+            precomputed_X_test,
+            y_train,
+            y_test,
+            krn,
+            cfg,
+        )
+        if score > best_score:
+            best_estimator = est
+            best_params = par
+            best_score = score
 
     return best_estimator, best_params, best_score
 
