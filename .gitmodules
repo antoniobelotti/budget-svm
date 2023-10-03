@@ -1,3 +1,6 @@
 [submodule "experiments/comparisons/NSSVM"]
 	path = experiments/comparisons/NSSVM
 	url = https://github.com/ShenglongZhou/NSSVM.git
+[submodule "experiments/comparisons/budgetedsvmtoolbox"]
+	path = experiments/comparisons/budgetedsvmtoolbox
+	url = https://github.com/djurikom/BudgetedSVM.git
