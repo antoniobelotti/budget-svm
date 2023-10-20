@@ -4,3 +4,6 @@
 [submodule "experiments/comparisons/budgetedsvmtoolbox"]
 	path = experiments/comparisons/budgetedsvmtoolbox
 	url = https://github.com/djurikom/BudgetedSVM.git
+[submodule "experiments/comparisons/LIBIRWLS"]
+	path = experiments/comparisons/LIBIRWLS
+	url = https://github.com/RobeDM/LIBIRWLS.git
