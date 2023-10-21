@@ -16,7 +16,7 @@ class Dataset:
     complexity_report: dict
 
     @classmethod
-    def from_json(cls, ds_json) -> 'Dataset':
+    def from_json(cls, ds_json) -> "Dataset":
         return Dataset(
             id=ds_json["id"],
             X=np.array(ds_json["X"]),
@@ -26,5 +26,5 @@ class Dataset:
             y_train=np.array(ds_json["y_train"]),
             y_test=np.array(ds_json["y_test"]),
             params=ds_json["params"],
-            complexity_report=ds_json["complexity_report"]
+            complexity_report=ds_json["complexity_report"],
         )

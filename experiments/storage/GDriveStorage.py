@@ -17,7 +17,7 @@ from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
 
 from experiments.storage.Storage import Storage
-from experiments.datasets.Dataset import Dataset
+from experiments.datasets.Base import Dataset
 from experiments.utils import CustomJSONEncoder
 from budgetsvm.svm import SVC
 
