@@ -4,7 +4,7 @@ import numpy as np
 import numpy.typing as npt
 
 from experiments.storage.Storage import Storage
-from experiments.synthetic_datasets.BaseDatasetBuilder import BaseDatasetBuilder
+from experiments.datasets.BaseDatasetBuilder import BaseDatasetBuilder
 
 
 class SinusoidDatasetBuilder(BaseDatasetBuilder):

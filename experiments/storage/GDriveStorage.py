@@ -4,9 +4,11 @@ import json
 import logging
 import os
 import pickle
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+import pandas as pd
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -15,7 +17,7 @@ from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
 
 from experiments.storage.Storage import Storage
-from experiments.synthetic_datasets.Dataset import Dataset
+from experiments.datasets.Dataset import Dataset
 from experiments.utils import CustomJSONEncoder
 from budgetsvm.svm import SVC
 
@@ -104,9 +106,7 @@ class GDriveStorage(Storage):
 
         try:
             request = self.service.files().create(
-                body=file_metadata,
-                media_body=media,
-                fields="id"
+                body=file_metadata, media_body=media, fields="id"
             )
             upload_response = None
             while upload_response is None:
@@ -209,3 +209,123 @@ class GDriveStorage(Storage):
         tmp_filepath.unlink()
 
         return Dataset.from_json(ds)
+
+    def list_results_files(self):
+        resp = (
+            self.service.files()
+            .list(
+                q=f"'{self.folder_id_map['results']}' in parents and trashed=false",
+                spaces="drive",
+                fields="files(name)",
+            )
+            .execute()
+        )
+
+        if len(resp["files"]) == 0:
+            return None
+
+        for filename in sorted(resp["files"], key=lambda item: item["name"]):
+            filename = filename["name"].split("_")[0].split(".json")[0]
+
+            readable_date = datetime.fromtimestamp(float(filename)).strftime(
+                "%d/%m/%Y %H:%M"
+            )
+            print(f"{readable_date}\t{filename}.json")
+
+    def get_results_no_schema(self, target_file_name):
+        file_list = (
+            self.service.files()
+            .list(
+                q=f"'{self.folder_id_map['results']}' in parents and trashed=false",
+                spaces="drive",
+                fields="files(id,name)",
+            )
+            .execute()
+        )
+        file = next(
+            file for file in file_list["files"] if file["name"] == target_file_name
+        )
+
+        request = self.service.files().get_media(fileId=file["id"])
+        tmp_filepath = Path(f"{file['id']}.json")
+        with open(tmp_filepath, "wb") as f:
+            downloader = MediaIoBaseDownload(f, request)
+
+            done = False
+            while not done:
+                _, done = downloader.next_chunk()
+
+        with open(tmp_filepath, "r") as f:
+            df = pd.read_json(f)
+
+        tmp_filepath.unlink()
+        return df
+
+    def get_result_dataframe(self, target_file_name):
+        file_list = (
+            self.service.files()
+            .list(
+                q=f"'{self.folder_id_map['results']}' in parents and trashed=false",
+                spaces="drive",
+                fields="files(id,name)",
+            )
+            .execute()
+        )
+        file = next(
+            file for file in file_list["files"] if file["name"] == target_file_name
+        )
+
+        request = self.service.files().get_media(fileId=file["id"])
+        tmp_filepath = Path(f"{file['id']}.json")
+        with open(tmp_filepath, "wb") as f:
+            downloader = MediaIoBaseDownload(f, request)
+
+            done = False
+            while not done:
+                _, done = downloader.next_chunk()
+
+        with open(tmp_filepath, "r") as f:
+            df = pd.read_json(f)
+
+        tmp_filepath.unlink()
+
+        # add budget percentage as column
+        df["budget_percentage"] = df["model_name"].apply(
+            lambda x: float(x.split("_")[0]) if "full" not in x else 1.0
+        )
+
+        # convert training time in minutes
+        df.train_time = df.train_time.div(60)
+        df = df.rename({"train_time": "train_time_min"}, axis=1)
+
+        # set datatypes
+        df = df.astype(
+            {
+                "dataset": "string",
+                "model_UUID": "string",
+                "model_name": "string",
+                "solver_status": "int",
+                "params": "object",
+                "score": "float",
+                "budget": "float",
+                "num_sv": "float",
+                "train_time_min": "float",
+                "s_pos": "int",
+                "s_neg": "int",
+                "b_pos": "int",
+                "b_neg": "int",
+                "mip_gap": "float",
+            }
+        )
+
+        full_budget_score = df.query("budget==inf")[["dataset", "score"]]
+        df = df.join(
+            full_budget_score.set_index("dataset"), on="dataset", rsuffix="_full_budget"
+        )
+        df["score_ratio"] = df["score"] / df["score_full_budget"]
+        return df
+
+
+if __name__ == "__main__":
+    storage = GDriveStorage()
+    storage.get_result_dataframe("1689153514.3068242.json")

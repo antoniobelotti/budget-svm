@@ -6,7 +6,7 @@ import numpy.typing as npt
 from sklearn.preprocessing import MinMaxScaler
 
 from experiments.storage.Storage import Storage
-from experiments.synthetic_datasets.BaseDatasetBuilder import BaseDatasetBuilder
+from experiments.datasets.BaseDatasetBuilder import BaseDatasetBuilder
 
 
 class PacmanDatasetBuilder(BaseDatasetBuilder):

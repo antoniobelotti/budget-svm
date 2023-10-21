@@ -8,11 +8,8 @@ import numpy.typing as npt
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.datasets import dump_svmlight_file
 from sklearn.exceptions import FitFailedWarning
-from sklearn.model_selection import GridSearchCV
 from sklearn.utils.validation import check_is_fitted
 
-from experiments.storage.DummyStorage import DummyStorage
-from experiments.synthetic_datasets.PacmanDatasetBuilder import PacmanDatasetBuilder
 from experiments.utils import Timer
 
 

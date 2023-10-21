@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Optional
 
 from experiments.storage.Storage import Storage
-from experiments.synthetic_datasets.Dataset import Dataset
+from experiments.datasets.Dataset import Dataset
 from svm import SVC
 
 

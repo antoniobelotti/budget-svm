@@ -1,7 +1,7 @@
 import unittest
 
 from experiments.storage.DummyStorage import DummyStorage
-from experiments.synthetic_datasets.PacmanDatasetBuilder import PacmanDatasetBuilder
+from experiments.datasets.PacmanDatasetBuilder import PacmanDatasetBuilder
 
 
 class TestPacmanDatasetBuilder(unittest.TestCase):

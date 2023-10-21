@@ -2,7 +2,7 @@ from abc import abstractmethod
 from pathlib import Path
 from typing import Protocol, Optional
 
-from experiments.synthetic_datasets.Dataset import Dataset
+from experiments.datasets.Dataset import Dataset
 from budgetsvm.svm import SVC
 
 

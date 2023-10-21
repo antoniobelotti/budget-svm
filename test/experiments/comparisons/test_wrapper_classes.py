@@ -6,7 +6,7 @@ from experiments.comparisons.BudgetedSVMToolbox import BudgetedSVMToolbox
 from experiments.comparisons.LIBIRWLS import IRWLS
 from experiments.comparisons.NSSVM import NSSVM
 from experiments.storage.DummyStorage import DummyStorage
-from experiments.synthetic_datasets.PacmanDatasetBuilder import PacmanDatasetBuilder
+from experiments.datasets.PacmanDatasetBuilder import PacmanDatasetBuilder
 
 
 class TestNSSVM(unittest.TestCase):

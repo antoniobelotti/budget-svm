@@ -13,7 +13,7 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.utils.validation import check_is_fitted
 
 from experiments.storage.DummyStorage import DummyStorage
-from experiments.synthetic_datasets.PacmanDatasetBuilder import PacmanDatasetBuilder
+from experiments.datasets.PacmanDatasetBuilder import PacmanDatasetBuilder
 from experiments.utils import Timer
 
 

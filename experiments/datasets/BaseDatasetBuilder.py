@@ -11,7 +11,7 @@ import problexity as px
 from sklearn.model_selection import train_test_split
 
 from experiments.storage.Storage import Storage
-from experiments.synthetic_datasets.Dataset import Dataset
+from experiments.datasets.Dataset import Dataset
 
 
 class BaseDatasetBuilder(ABC):
