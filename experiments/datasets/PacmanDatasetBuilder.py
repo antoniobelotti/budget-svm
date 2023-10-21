@@ -19,9 +19,7 @@ class PacmanDatasetBuilder(BaseDatasetBuilder):
         # create a population 10 times bigger than n
         mean = np.zeros(self.dim)
         cov = np.eye(self.dim) * gamma
-        pop = self.rng.multivariate_normal(
-            mean, cov, population_size, check_valid="raise"
-        )
+        pop = self.rng.multivariate_normal(mean, cov, population_size, check_valid="raise")
 
         if kwargs.get("scale_min_max", False):
             # scale between 0 and 1
@@ -55,7 +53,7 @@ class PacmanDatasetBuilder(BaseDatasetBuilder):
         x_shift, y_shift = 0, 0
         if kwargs.get("scale_min_max", False):
             x_shift, y_shift = 0.5, 0.5
-            
+
         return functools.partial(labeling_fn, x_shift, y_shift)
 
     def __init__(self, storage: Storage):

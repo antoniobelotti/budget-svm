@@ -13,9 +13,7 @@ class TestNSSVM(unittest.TestCase):
     def test_fit_score_predict(self):
         budget = 50
         model = NSSVM(budget=50)
-        ds = PacmanDatasetBuilder(DummyStorage()).build(
-            n=300, r=0.1, p=0.1, seed=42, gamma=10, a=0.1
-        )
+        ds = PacmanDatasetBuilder(DummyStorage()).build(n=300, r=0.1, p=0.1, seed=42, gamma=10, a=0.1)
 
         self.assertIsNone(
             model.fit(ds.X_test, ds.y_test),
@@ -31,9 +29,7 @@ class TestNSSVM(unittest.TestCase):
 
     def test_is_GridSearchCV_compatible(self):
         model = NSSVM()
-        ds = PacmanDatasetBuilder(DummyStorage()).build(
-            n=300, r=0.1, p=0.1, seed=42, gamma=10, a=0.1
-        )
+        ds = PacmanDatasetBuilder(DummyStorage()).build(n=300, r=0.1, p=0.1, seed=42, gamma=10, a=0.1)
 
         cv = GridSearchCV(
             model,
@@ -48,18 +44,14 @@ class TestNSSVM(unittest.TestCase):
             0,
             "zero test accuracy from a successfully trained model seems unlikely",
         )
-        self.assertIsNotNone(
-            cv.best_estimator_, "best estimator should be a valid model"
-        )
+        self.assertIsNotNone(cv.best_estimator_, "best estimator should be a valid model")
 
 
 class TestBudgetedsvmtoolbox(unittest.TestCase):
     def test_fit_score_predict(self):
         budget = 50
         model = BudgetedSVMToolbox(budget=50)
-        ds = PacmanDatasetBuilder(DummyStorage()).build(
-            n=300, r=0.1, p=0.1, seed=42, gamma=10, a=0.1
-        )
+        ds = PacmanDatasetBuilder(DummyStorage()).build(n=300, r=0.1, p=0.1, seed=42, gamma=10, a=0.1)
 
         self.assertIsNone(
             model.fit(ds.X_test, ds.y_test),
@@ -79,9 +71,7 @@ class TestBudgetedsvmtoolbox(unittest.TestCase):
 
     def test_is_GridSearchCV_compatible(self):
         model = BudgetedSVMToolbox()
-        ds = PacmanDatasetBuilder(DummyStorage()).build(
-            n=300, r=0.1, p=0.1, seed=42, gamma=10, a=0.1
-        )
+        ds = PacmanDatasetBuilder(DummyStorage()).build(n=300, r=0.1, p=0.1, seed=42, gamma=10, a=0.1)
 
         cv = GridSearchCV(
             model,
@@ -96,18 +86,14 @@ class TestBudgetedsvmtoolbox(unittest.TestCase):
             0,
             "zero test accuracy from a successfully trained model seems unlikely",
         )
-        self.assertIsNotNone(
-            cv.best_estimator_, "best estimator should be a valid model"
-        )
+        self.assertIsNotNone(cv.best_estimator_, "best estimator should be a valid model")
 
 
 class TestLIBIRWLS(unittest.TestCase):
     def test_fit_score_predict(self):
         budget = 50
         model = IRWLS(budget=50)
-        ds = PacmanDatasetBuilder(DummyStorage()).build(
-            n=300, r=0.1, p=0.1, seed=42, gamma=10, a=0.1
-        )
+        ds = PacmanDatasetBuilder(DummyStorage()).build(n=300, r=0.1, p=0.1, seed=42, gamma=10, a=0.1)
 
         self.assertIsNone(
             model.fit(ds.X_test, ds.y_test),
@@ -128,9 +114,7 @@ class TestLIBIRWLS(unittest.TestCase):
 
     def test_is_GridSearchCV_compatible(self):
         model = IRWLS()
-        ds = PacmanDatasetBuilder(DummyStorage()).build(
-            n=300, r=0.1, p=0.1, seed=42, gamma=10, a=0.1
-        )
+        ds = PacmanDatasetBuilder(DummyStorage()).build(n=300, r=0.1, p=0.1, seed=42, gamma=10, a=0.1)
 
         cv = GridSearchCV(
             model,
@@ -145,6 +129,4 @@ class TestLIBIRWLS(unittest.TestCase):
             0,
             "zero test accuracy from a successfully trained model seems unlikely",
         )
-        self.assertIsNotNone(
-            cv.best_estimator_, "best estimator should be a valid model"
-        )
+        self.assertIsNotNone(cv.best_estimator_, "best estimator should be a valid model")

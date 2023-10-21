@@ -49,7 +49,7 @@ class Storage(Protocol):
         raise NotImplementedError
 
     @abstractmethod
-    def save_log(self, log_file_path: Path, timestamp:str):
+    def save_log(self, log_file_path: Path, timestamp: str):
         """Save the logs of an experiment
 
         Args:

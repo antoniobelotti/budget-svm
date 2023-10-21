@@ -64,9 +64,7 @@ class IRWLS(ClassifierMixin, BaseEstimator):
             capture_output=True,
         )
         if comp_proc.returncode != 0:
-            raise RuntimeError(
-                f"Unable to compile BudgetedSVM Toolbox.\n{comp_proc.stderr}"
-            )
+            raise RuntimeError(f"Unable to compile BudgetedSVM Toolbox.\n{comp_proc.stderr}")
         print("Compiled!")
 
     def fit(self, X: npt.NDArray[float], y: npt.NDArray[float]) -> None:
@@ -140,9 +138,7 @@ class IRWLS(ClassifierMixin, BaseEstimator):
         dataset_path = self.all_datasets_path / str(uuid.uuid4())
         dump_svmlight_file(X, np.zeros(X.shape[0]), dataset_path, zero_based=False)
 
-        prediction_file_path = (
-            self.all_datasets_path / f"{self.model_name_}_predictions"
-        )
+        prediction_file_path = self.all_datasets_path / f"{self.model_name_}_predictions"
 
         """
         Usage: LIBIRWLS-predict [options] data_set_file model_file output_file

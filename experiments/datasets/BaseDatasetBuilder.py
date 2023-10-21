@@ -39,9 +39,7 @@ class BaseDatasetBuilder(ABC):
         dim: int = 2,
         **kwargs,
     ) -> Dataset:
-        bound = inspect.signature(self.build).bind(
-            n, r, p, seed, test_size, dim, **kwargs
-        )
+        bound = inspect.signature(self.build).bind(n, r, p, seed, test_size, dim, **kwargs)
         bound.apply_defaults()
         dataset_generation_parameters = bound.arguments
         binded_kwargs = dataset_generation_parameters.pop("kwargs")
@@ -70,9 +68,7 @@ class BaseDatasetBuilder(ABC):
         # introduce desired amount of noise
         self.flip_class(y, r)
 
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=test_size, random_state=seed
-        )
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=seed)
 
         cc = px.ComplexityCalculator()
         y_copy = y.copy()

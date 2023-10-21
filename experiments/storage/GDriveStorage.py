@@ -43,22 +43,14 @@ class GDriveStorage(Storage):
         # The file token.json stores the user's access and refresh tokens, and is
         # created automatically when the authorization flow completes for the first time.
         if self.TOKEN_PATH.exists():
-            self.credentials = Credentials.from_authorized_user_file(
-                self.TOKEN_PATH, self.SCOPES
-            )
+            self.credentials = Credentials.from_authorized_user_file(self.TOKEN_PATH, self.SCOPES)
 
         # If there are no (valid) credentials available, let the user log in.
         if not self.credentials or not self.credentials.valid:
-            if (
-                self.credentials
-                and self.credentials.expired
-                and self.credentials.refresh_token
-            ):
+            if self.credentials and self.credentials.expired and self.credentials.refresh_token:
                 self.credentials.refresh(Request())
             else:
-                flow = InstalledAppFlow.from_client_secrets_file(
-                    self.CREDENTIALS_PATH, self.SCOPES
-                )
+                flow = InstalledAppFlow.from_client_secrets_file(self.CREDENTIALS_PATH, self.SCOPES)
                 self.credentials = flow.run_local_server(port=0)
 
             # Save the credentials for the next run
@@ -105,9 +97,7 @@ class GDriveStorage(Storage):
         media = MediaFileUpload(filepath, chunksize=chunk_size, resumable=True)
 
         try:
-            request = self.service.files().create(
-                body=file_metadata, media_body=media, fields="id"
-            )
+            request = self.service.files().create(body=file_metadata, media_body=media, fields="id")
             upload_response = None
             while upload_response is None:
                 _, upload_response = request.next_chunk()
@@ -158,9 +148,7 @@ class GDriveStorage(Storage):
 
         success = self.__upload_file(tmp_filepath, "results")
         if not success:
-            logging.error(
-                f"upload of results {timestamp} failed! Keeping file locally."
-            )
+            logging.error(f"upload of results {timestamp} failed! Keeping file locally.")
             return
 
         tmp_filepath.unlink()
@@ -170,9 +158,7 @@ class GDriveStorage(Storage):
 
         success = self.__upload_file(log_file_path, "logs")
         if not success:
-            logging.error(
-                f"upload of logs for experiment {timestamp} failed! Keeping file locally."
-            )
+            logging.error(f"upload of logs for experiment {timestamp} failed! Keeping file locally.")
             return
 
         log_file_path.unlink()
@@ -227,9 +213,7 @@ class GDriveStorage(Storage):
         for filename in sorted(resp["files"], key=lambda item: item["name"]):
             filename = filename["name"].split("_")[0].split(".json")[0]
 
-            readable_date = datetime.fromtimestamp(float(filename)).strftime(
-                "%d/%m/%Y %H:%M"
-            )
+            readable_date = datetime.fromtimestamp(float(filename)).strftime("%d/%m/%Y %H:%M")
             print(f"{readable_date}\t{filename}.json")
 
     def get_results_no_schema(self, target_file_name):
@@ -242,9 +226,7 @@ class GDriveStorage(Storage):
             )
             .execute()
         )
-        file = next(
-            file for file in file_list["files"] if file["name"] == target_file_name
-        )
+        file = next(file for file in file_list["files"] if file["name"] == target_file_name)
 
         request = self.service.files().get_media(fileId=file["id"])
         tmp_filepath = Path(f"{file['id']}.json")
@@ -271,9 +253,7 @@ class GDriveStorage(Storage):
             )
             .execute()
         )
-        file = next(
-            file for file in file_list["files"] if file["name"] == target_file_name
-        )
+        file = next(file for file in file_list["files"] if file["name"] == target_file_name)
 
         request = self.service.files().get_media(fileId=file["id"])
         tmp_filepath = Path(f"{file['id']}.json")
@@ -290,9 +270,7 @@ class GDriveStorage(Storage):
         tmp_filepath.unlink()
 
         # add budget percentage as column
-        df["budget_percentage"] = df["model_name"].apply(
-            lambda x: float(x.split("_")[0]) if "full" not in x else 1.0
-        )
+        df["budget_percentage"] = df["model_name"].apply(lambda x: float(x.split("_")[0]) if "full" not in x else 1.0)
 
         # convert training time in minutes
         df.train_time = df.train_time.div(60)
@@ -319,9 +297,7 @@ class GDriveStorage(Storage):
         )
 
         full_budget_score = df.query("budget==inf")[["dataset", "score"]]
-        df = df.join(
-            full_budget_score.set_index("dataset"), on="dataset", rsuffix="_full_budget"
-        )
+        df = df.join(full_budget_score.set_index("dataset"), on="dataset", rsuffix="_full_budget")
         df["score_ratio"] = df["score"] / df["score_full_budget"]
         return df
 

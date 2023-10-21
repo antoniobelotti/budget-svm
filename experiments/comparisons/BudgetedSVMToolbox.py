@@ -26,9 +26,7 @@ class BudgetedSVMToolbox(ClassifierMixin, BaseEstimator):
     Refer to ./budgetedsvmtoolbox/README.txt for details on usage.
     """
 
-    __BASE_PATH = (
-        pathlib.Path(os.path.dirname(os.path.realpath(__file__))) / "budgetedsvmtoolbox"
-    )
+    __BASE_PATH = pathlib.Path(os.path.dirname(os.path.realpath(__file__))) / "budgetedsvmtoolbox"
     __TRAIN_EXE = __BASE_PATH / "bin/budgetedsvm-train"
     __PREDICT_EXE = __BASE_PATH / "bin/budgetedsvm-predict"
 
@@ -60,13 +58,9 @@ class BudgetedSVMToolbox(ClassifierMixin, BaseEstimator):
 
     def __try_compiling(self):
         print("BudgetedSVM Toolbox executable not found. Trying to Make...")
-        comp_proc = subprocess.run(
-            ["make", "--quiet", "-C", self.__BASE_PATH], capture_output=True
-        )
+        comp_proc = subprocess.run(["make", "--quiet", "-C", self.__BASE_PATH], capture_output=True)
         if comp_proc.returncode != 0:
-            raise RuntimeError(
-                f"Unable to compile BudgetedSVM Toolbox.\n{comp_proc.stderr}"
-            )
+            raise RuntimeError(f"Unable to compile BudgetedSVM Toolbox.\n{comp_proc.stderr}")
         print("Compiled!")
 
     def fit(self, X: npt.NDArray[float], y: npt.NDArray[float]) -> None:
@@ -122,9 +116,7 @@ class BudgetedSVMToolbox(ClassifierMixin, BaseEstimator):
         dataset_path = self.all_datasets_path / str(uuid.uuid4())
         dump_svmlight_file(X, np.zeros(X.shape[0]), dataset_path, zero_based=False)
 
-        prediction_file_path = (
-            self.all_datasets_path / f"{self.model_name_}_predictions"
-        )
+        prediction_file_path = self.all_datasets_path / f"{self.model_name_}_predictions"
 
         rc = subprocess.run(
             [self.__PREDICT_EXE, dataset_path, self.model_path_, prediction_file_path],
