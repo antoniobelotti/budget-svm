@@ -15,10 +15,7 @@ class NSSVM(ClassifierMixin, BaseEstimator):
     The original repository is added as a submodule.
     """
 
-    __SOLVER_PATH = (
-        pathlib.Path(os.path.dirname(os.path.realpath(__file__)))
-        / "NSSVM/NSSVM/solver/NSSVM.m"
-    )
+    __SOLVER_PATH = pathlib.Path(os.path.dirname(os.path.realpath(__file__))) / "NSSVM/NSSVM/solver/NSSVM.m"
     matlab_engine: MatlabEngine = matlab.engine.start_matlab()
 
     def __init__(
@@ -48,7 +45,6 @@ class NSSVM(ClassifierMixin, BaseEstimator):
         """
         assert self.__SOLVER_PATH.exists() and self.__SOLVER_PATH.is_file()
 
-        self.matlab_engine.cd(str(self.__SOLVER_PATH.parent), nargout=0)
         self.C = C
         self.c = c
         self.budget = budget
@@ -56,6 +52,8 @@ class NSSVM(ClassifierMixin, BaseEstimator):
         self.max_iter = max_iter
 
     def fit(self, X: npt.NDArray[float], y: npt.NDArray[int]) -> None:
+        self.matlab_engine.cd(str(self.__SOLVER_PATH.parent), nargout=0)
+
         X, y = check_X_y(X, y)
 
         y = y.reshape(-1, 1)
