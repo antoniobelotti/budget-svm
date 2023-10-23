@@ -210,7 +210,9 @@ class BaseExperiment(ABC):
 
     def run(self):
         if not isinstance(self.get_empty_model(), our_SVC) and self.USE_PRECOMPUTED_KERNEL:
-            logging.warning(f"setting USE_PRECOMPUTED_KERNEL=False - precomputed kernel not supported for this model")
+            self.logger.warning(
+                f"setting USE_PRECOMPUTED_KERNEL=False - precomputed kernel not supported for this model"
+            )
             self.USE_PRECOMPUTED_KERNEL = False
 
         self.logger.info(
