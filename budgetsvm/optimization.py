@@ -1,9 +1,8 @@
-import time
+import itertools as it
+import logging
 from abc import ABC, abstractmethod
 
 import numpy as np
-import itertools as it
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -147,9 +146,7 @@ class GurobiSolver(Solver):
         self.time_limit = time_limit
         self.initial_values = initial_values
 
-    def solve_classification_problem(
-        self, X, y, C=1, kernel=GaussianKernel(), budget=None
-    ):
+    def solve_classification_problem(self, X, y, C=1, kernel=GaussianKernel(), budget=None):
         """Optimize the classification-based optimization problem via gurobi.
 
         Build and solve the constrained optimization problem at the basis
@@ -259,9 +256,7 @@ class GurobiSolver(Solver):
 
                 return np.array(solution), model.Status, model.Params.MIPGap
 
-    def solve_regression_problem(
-        self, X, y, C=1, kernel=GaussianKernel(), epsilon=0.1, budget=None
-    ):
+    def solve_regression_problem(self, X, y, C=1, kernel=GaussianKernel(), epsilon=0.1, budget=None):
         """Optimize via gurobi.
 
         Build and solve the constrained optimization problem at the basis
@@ -292,12 +287,8 @@ class GurobiSolver(Solver):
 
                 for i in range(m):
                     if C < np.inf and budget is None:
-                        model.addVar(
-                            name=f"alpha_{i}", lb=0, ub=C, vtype=GRB.CONTINUOUS
-                        )
-                        model.addVar(
-                            name=f"alphahat_{i}", lb=0, ub=C, vtype=GRB.CONTINUOUS
-                        )
+                        model.addVar(name=f"alpha_{i}", lb=0, ub=C, vtype=GRB.CONTINUOUS)
+                        model.addVar(name=f"alphahat_{i}", lb=0, ub=C, vtype=GRB.CONTINUOUS)
                     else:
                         model.addVar(name=f"alpha_{i}", lb=0, vtype=GRB.CONTINUOUS)
                         model.addVar(name=f"alphahat_{i}", lb=0, vtype=GRB.CONTINUOUS)
@@ -354,9 +345,7 @@ class GurobiSolver(Solver):
                 model.optimize()
 
                 if model.Status != GRB.OPTIMAL:
-                    raise ValueError(
-                        "optimal solution not found! " f"status={model.Status}"
-                    )
+                    raise ValueError("optimal solution not found! " f"status={model.Status}")
 
                 alpha_opt = np.array([a.x for a in alpha])
                 alpha_hat_opt = np.array([a.x for a in alpha_hat])
@@ -364,206 +353,9 @@ class GurobiSolver(Solver):
                 if budget is not None:
                     gamma_opt = gamma.x
 
-                solution = (
-                    (alpha_opt, alpha_hat_opt)
-                    if budget is None
-                    else (alpha_opt, alpha_hat_opt, gamma_opt)
-                )
+                solution = (alpha_opt, alpha_hat_opt) if budget is None else (alpha_opt, alpha_hat_opt, gamma_opt)
 
                 return np.array(solution)
 
     def __repr__(self):
-        return (
-            f"GurobiSolver(time_limit={self.time_limit}, "
-            + f"initial_values={self.initial_values})"
-        )
-
-
-class ReusableGurobiSolver(Solver):
-    """Solver based on gurobi.
-
-    Using this class requires that gurobi is installed and activated
-    with a software key. The library is available at no cost for academic
-    purposes (see
-    https://www.gurobi.com/downloads/end-user-license-agreement-academic/).
-    Alongside the library, also its interface to python should be installed,
-    via the gurobipy package.
-    """
-
-    def __init__(self, problem="classification", time_limit=300, initial_values=None):
-        """
-        Build an object of type GurobiSolver.
-
-        :param problem: Type of problem to be solved.
-        :type problem: str ('classification' and 'regression' are allowed)
-        :param time_limit: Maximum time (in seconds) before stopping iterative
-          optimization, defaults to 10*60.
-        :type time_limit: int
-        :param initial_values: Initial values for variables of the optimization
-          problem, defaults to None.
-        :type initial_values: iterable of floats or None
-        """
-        super().__init__(problem)
-        self.time_limit = time_limit
-        self.initial_values = initial_values
-
-        self.env = Env(empty=True)
-        self.env.setParam("LogToConsole", 0)
-        self.env.setParam("MIPGapAbs", 0.05)
-
-        self.model = None
-        self.m = None
-
-    def __init_base_model(self, X, y, C, kernel=GaussianKernel()):
-        self.env.start()
-
-        model = Model("svc", env=self.env)
-        model.setParam("LogToConsole", 0)
-        model.setParam("NonConvex", 2)
-        model.setParam("TimeLimit", self.time_limit)
-
-        model.addVars(list(range(self.m)), lb=0, ub=C, vtype=GRB.CONTINUOUS, name="alpha")
-
-        model.update()
-
-        vars = model.getVars()
-        alpha = vars[:self.m]
-
-        if self.initial_values is not None:
-            for a, i in zip(alpha, self.initial_values[0]):
-                a.start = i
-
-            # if budget is not None:
-            #    for g, i in zip(gamma, self.initial_values[0]):
-            #        g.start = i
-
-        obj = QuadExpr()
-
-        obj.addTerms([1.0] * len(alpha), alpha)
-
-        if kernel.precomputed:
-            for i, j in it.product(range(self.m), range(self.m)):
-                obj.add(
-                    alpha[i] * alpha[j],
-                    -0.5 * y[i] * y[j] * X[i][j],
-                    )
-        else:
-            for i, j in it.product(range(self.m), range(self.m)):
-                obj.add(
-                    alpha[i] * alpha[j],
-                    -0.5 * y[i] * y[j] * kernel.compute(X[i], X[j]),
-                    )
-
-        model.setObjective(obj, GRB.MAXIMIZE)
-
-        constEqual = LinExpr()
-        constEqual.add(quicksum(alpha * y), 1.0)
-
-        model.addLConstr(constEqual, GRB.EQUAL, 0)
-
-        #################################
-        # budget part
-        model.addVars(list(range(self.m)), vtype=GRB.BINARY, name="gamma")
-        model.update()
-
-        vars = model.getVars()
-
-        alpha = vars[: self.m]
-        gamma = vars[self.m:]
-
-        for i, (a, g) in enumerate(zip(alpha, gamma)):
-            const = QuadExpr()
-            const.add(a, 1.0)
-            model.addQConstr(const, GRB.LESS_EQUAL, C * g)
-
-        # constraint actually limiting budget is set in __update_model_budget_constraint
-
-        self.model = model
-
-    def __update_model_budget_constraint(self, budget):
-        assert self.model
-
-        existing_constr = self.model.getConstrByName("budget_constraint")
-        if existing_constr:
-            existing_constr.setAttr(GRB.Attr.RHS, budget)
-        else:
-            vars = self.model.getVars()
-            gamma = vars[self.m:]
-
-            const = LinExpr()
-            const.add(quicksum(gamma), 1.0)
-            self.model.addLConstr(const, GRB.LESS_EQUAL, budget, name="budget_constraint")
-
-    def solve_classification_problem(
-            self, X, y, C=1, kernel=GaussianKernel(), budget=None
-    ):
-        """Optimize the classification-based optimization problem via gurobi.
-
-        Build and solve the constrained optimization problem at the basis
-        of SV classification, either classic or budgeted, using the gurobi
-        API.
-
-        :param X: Objects in training set.
-        :type X: iterable
-        :param y: Binary labels for the objects in `xs`.
-        :type y: iterable
-        :param C: constant managing the trade-off in joint complexity/error
-                  optimization.
-        :type C: float
-        :param kernel: Kernel function to be used.
-        :type kernel: :class:`mulearn.kernel.Kernel`
-        :param budget: value of the budget (None in case of standard
-                       classification).
-        :type budget: float
-        :raises: ValueError if C is non-positive, budget is specified as a
-                 negative value or if X and y have different lengths.
-        :returns: `list` -- optimal values for the independent variables
-          of the problem."""
-
-        m = len(X)
-        assert m == len(y)
-        assert C > 0
-
-        if self.m is not None and self.m != m:
-            # this happens when using cross validation. The dataset is the same, so we reuse the same solver object,
-            # but fit is done on a different subset of points, so we rebuild the model.
-            self.model = None
-
-        self.m = m
-
-        if not self.model:
-            self.__init_base_model(X, y, C, kernel)
-
-        if budget:
-            self.__update_model_budget_constraint(budget)
-
-        self.model.optimize()
-
-        if self.model.Status != GRB.OPTIMAL:
-            if self.model.Status != GRB.TIME_LIMIT or self.model.SolCount == 0:
-                raise ValueError("no solution found! " f"status={self.model.Status}")
-
-        self.obj_val = self.model.getObjective().getValue()
-
-        vars = self.model.getVars()
-        alpha = vars[: self.m]
-        gamma = vars[self.m:]
-
-        alpha_opt = np.array([a.x for a in alpha])
-        if budget is not None:
-            gamma_opt = np.array([g.x for g in gamma])
-
-        solution = (alpha_opt, gamma_opt) if budget is not None else alpha_opt
-
-        return np.array(solution), self.model.Status == GRB.OPTIMAL
-
-    def solve_regression_problem(
-            self, X, y, C=1, kernel=GaussianKernel(), epsilon=0.1, budget=None
-    ):
-        pass
-
-    def __repr__(self):
-        return (
-                f"GurobiSolver(time_limit={self.time_limit}, "
-                + f"initial_values={self.initial_values})"
-        )
+        return f"GurobiSolver(time_limit={self.time_limit}, " + f"initial_values={self.initial_values})"
