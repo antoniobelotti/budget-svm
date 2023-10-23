@@ -17,7 +17,7 @@ from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
 
 from experiments.storage.Storage import Storage
-from experiments.datasets.Base import Dataset
+from experiments.datasets.Base import Dataset, PrecomputedKernelDataset
 from experiments.utils import CustomJSONEncoder
 from budgetsvm.svm import SVC
 
@@ -123,7 +123,7 @@ class GDriveStorage(Storage):
 
         tmp_filepath.unlink()
 
-    def save_dataset(self, ds: Dataset):
+    def save_dataset(self, ds: Dataset | PrecomputedKernelDataset):
         logging.info(f"saving dataset {ds.id} on gdrive")
 
         tmp_filepath = Path(f"{ds.id}.json")
@@ -195,6 +195,39 @@ class GDriveStorage(Storage):
         tmp_filepath.unlink()
 
         return Dataset.from_json(ds)
+
+    def get_precomputed_kernel_dataset_if_exists(self, dataset_id: str) -> Optional[PrecomputedKernelDataset]:
+        # search for the file
+        resp = (
+            self.service.files()
+            .list(
+                q=f"'{self.folder_id_map['datasets']}' in parents and name='{dataset_id}.json'  and trashed = false",
+                spaces="drive",
+                fields="files(id)",
+            )
+            .execute()
+        )
+
+        if len(resp["files"]) == 0:
+            return None
+
+        file_id = resp["files"].pop()["id"]
+
+        request = self.service.files().get_media(fileId=file_id)
+        tmp_filepath = Path(f"{dataset_id}.json")
+        with open(tmp_filepath, "wb") as file:
+            downloader = MediaIoBaseDownload(file, request)
+
+            done = False
+            while not done:
+                _, done = downloader.next_chunk()
+
+        with open(tmp_filepath, "r") as f:
+            ds = json.load(f)
+
+        tmp_filepath.unlink()
+
+        return PrecomputedKernelDataset.from_json(ds)
 
     def list_results_files(self):
         resp = (

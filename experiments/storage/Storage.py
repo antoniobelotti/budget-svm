@@ -2,7 +2,7 @@ from abc import abstractmethod
 from pathlib import Path
 from typing import Protocol, Optional
 
-from experiments.datasets.Base import Dataset
+from experiments.datasets.Base import Dataset, PrecomputedKernelDataset
 from budgetsvm.svm import SVC
 
 
@@ -30,7 +30,16 @@ class Storage(Protocol):
         raise NotImplementedError
 
     @abstractmethod
-    def save_dataset(self, ds: Dataset):
+    def get_precomputed_kernel_dataset_if_exists(self, dataset_id: str) -> Optional[PrecomputedKernelDataset]:
+        """Download the precomputed kernel dataset identified by dataset_hash if exists, else return None
+
+        Args:
+            dataset_id (str): id of original dataset + str(kernel object)
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def save_dataset(self, ds: Dataset | PrecomputedKernelDataset):
         """Save a Dataset object
 
         Args:
