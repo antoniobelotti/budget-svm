@@ -68,7 +68,7 @@ class NSSVM(ClassifierMixin, BaseEstimator):
         }
         res = self.matlab_engine.NSSVM(X, y, params)
         self.alpha_ = res["alpha"]
-        self.num_sv_ = res["sv"]
+        self.num_sv_ = int(res["sv"])
         self.time_ = res["time"]
         self.w_ = res["w"][:-1]
         self.b_ = res["w"][-1]
