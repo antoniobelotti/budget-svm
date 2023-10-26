@@ -8,15 +8,21 @@ from budgetsvm.svm import SVC
 from experiments.BaseExperiment import BaseExperiment
 from experiments.datasets.Base import Dataset
 from experiments.storage.GDriveStorage import GDriveStorage
+from kernel import PrecomputedKernel, GaussianKernel, PolynomialKernel
 
 
-class SmallUCIDatasetsExperiments(BaseExperiment):
+class OurMethodSmallUCIDatasetsExperiments(BaseExperiment):
     CROSS_VALIDATION = 5
     BUDGET_PERCENTAGES = [0.01, 0.02, 0.03, 0.04, 0.05, 0.075, 0.1]
     EXPERIMENT_FILE_SUFFIX = "_small_uci_datasets_our_model"
 
     def get_cvgrid_parameter_dict(self) -> dict:
-        return {}
+        grid = {"C": [0.001, 0.01, 0.1, 1, 10], "kernels": []}
+        for sigma in [0.001, 0.01, 0.1, 1, 10]:
+            grid["kernels"].append(PrecomputedKernel(GaussianKernel(sigma=sigma)))
+        for degree in [3, 5, 10]:
+            grid["kernels"].append(PrecomputedKernel(PolynomialKernel(degree=degree)))
+        return grid
 
     def get_empty_model(self):
         return SVC()
@@ -59,5 +65,5 @@ class SmallUCIDatasetsExperiments(BaseExperiment):
 
 
 if __name__ == "__main__":
-    exp = SmallUCIDatasetsExperiments(GDriveStorage())
+    exp = OurMethodSmallUCIDatasetsExperiments(GDriveStorage())
     exp.run()
