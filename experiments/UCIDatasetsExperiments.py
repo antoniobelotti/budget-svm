@@ -8,7 +8,7 @@ from budgetsvm.svm import SVC
 from experiments.BaseExperiment import BaseExperiment
 from experiments.datasets.Base import Dataset
 from experiments.storage.GDriveStorage import GDriveStorage
-from kernel import PrecomputedKernel, GaussianKernel, PolynomialKernel
+from budgetsvm.kernel import PrecomputedKernel, GaussianKernel, PolynomialKernel
 
 
 class OurMethodSmallUCIDatasetsExperiments(BaseExperiment):
