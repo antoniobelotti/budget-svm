@@ -1,4 +1,6 @@
 import logging
+import math
+import os
 import pathlib
 import pprint
 import textwrap
@@ -111,13 +113,14 @@ class BaseExperiment(ABC):
 
         params["budget"] = [budget]
 
+        cpus = math.ceil(os.cpu_count() * 0.8)
         cv_grid = GridSearchCV(
             self.get_empty_model(),
             params,
             refit=True,
             verbose=0,
             cv=skf,
-            n_jobs=10,
+            n_jobs=cpus,
         )
         best_model, best_params, best_score = None, None, 0
         try:
