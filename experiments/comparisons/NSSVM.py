@@ -16,7 +16,6 @@ class NSSVM(ClassifierMixin, BaseEstimator):
     """
 
     __SOLVER_PATH = pathlib.Path(os.path.dirname(os.path.realpath(__file__))) / "NSSVM/NSSVM/solver/NSSVM.m"
-    matlab_engine: MatlabEngine = matlab.engine.start_matlab()
 
     def __init__(
         self,
@@ -27,8 +26,6 @@ class NSSVM(ClassifierMixin, BaseEstimator):
         max_iter: int = 2000,
     ):
         """
-        :param matlab_engine: The matlab runtime/engine thingy
-        :type matlab_engine: MatlabEngine from matlab.engine.matlabengine
         :param C: ?
         :type C: float in (0,1], default=0.25
         :param c: ?
@@ -44,7 +41,7 @@ class NSSVM(ClassifierMixin, BaseEstimator):
 
         """
         assert self.__SOLVER_PATH.exists() and self.__SOLVER_PATH.is_file()
-
+        self.matlab_engine: MatlabEngine = matlab.engine.start_matlab()
         self.C = C
         self.c = c
         self.budget = budget
