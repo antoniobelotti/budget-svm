@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
     from experiments.storage.Storage import Storage
 
-from kernel import *
+from budgetsvm.kernel import Kernel
 import numpy as np
 
 
