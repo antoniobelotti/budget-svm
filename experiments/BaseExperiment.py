@@ -134,7 +134,9 @@ class BaseExperiment(ABC):
             self.logger.error("GridSearchCV failed with unexpected error.")
             self.logger.error(traceback.format_exc())
 
-        num_sv = best_model.num_sv_ if hasattr(best_model, "num_sv_") else len(best_model.alpha_)
+        num_sv = None
+        if best_model is not None:
+            num_sv = best_model.num_sv_ if hasattr(best_model, "num_sv_") else len(best_model.alpha_)
         res = {
             "dataset": dataset.id if isinstance(dataset, Dataset) else dataset.dataset_id,
             "precomputed_dataset_id": None if isinstance(dataset, Dataset) else dataset.id,
