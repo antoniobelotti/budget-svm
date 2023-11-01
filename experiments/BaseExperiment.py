@@ -62,7 +62,7 @@ class BaseExperiment(ABC):
     def __init_logger(self):
         self.logger = logging.getLogger(f"experiment_{self.EXPERIMENT_ID}")
         self.logger.setLevel(logging.DEBUG)
-        formatter = logging.Formatter("%(asctime)s - %(name)s[%(levelname)s] \t%(message)s")
+        formatter = logging.Formatter("%(asctime)s [%(levelname)s] \t%(message)s")
         sh = logging.StreamHandler()
         sh.setFormatter(formatter)
 
@@ -139,7 +139,6 @@ class BaseExperiment(ABC):
             num_sv = best_model.num_sv_ if hasattr(best_model, "num_sv_") else len(best_model.alpha_)
         res = {
             "dataset": dataset.id if isinstance(dataset, Dataset) else dataset.dataset_id,
-            "precomputed_dataset_id": None if isinstance(dataset, Dataset) else dataset.id,
             "model": best_model,
             "model_UUID": uuid.uuid4(),
             "params": best_params,
@@ -183,6 +182,7 @@ class BaseExperiment(ABC):
                 res = self.__select_best_model(precomp_dataset, budget)
                 self.logger.info(f"best model achieved {res['score']:.2f} test accuracy with params {res['params']}")
                 res["model_name"] = f"{perc:.2f}_budget"
+                res["budget_percentage"] = perc
 
                 # fist model being trained with this budget
                 if budget not in results:
