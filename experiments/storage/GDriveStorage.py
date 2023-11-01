@@ -1,8 +1,8 @@
 from __future__ import print_function
 
+import gzip
 import json
 import logging
-import os
 import pickle
 from datetime import datetime
 from pathlib import Path
@@ -126,10 +126,11 @@ class GDriveStorage(Storage):
     def save_dataset(self, ds: Dataset | PrecomputedKernelDataset):
         logging.info(f"saving dataset {ds.id} on gdrive")
 
-        tmp_filepath = Path(f"{ds.id}.json")
+        tmp_filepath = Path(f"{ds.id}.json.gz")
 
-        with open(tmp_filepath, "w") as f:
-            json.dump(ds, f, cls=CustomJSONEncoder)
+        content = bytes(json.dumps(ds, cls=CustomJSONEncoder), "utf-8")
+        with gzip.open(tmp_filepath, 'wb') as f:
+            f.write(content)
 
         success = self.__upload_file(tmp_filepath, "datasets")
 
@@ -163,25 +164,39 @@ class GDriveStorage(Storage):
 
         log_file_path.unlink()
 
-    def get_dataset_if_exists(self, dataset_hash: str) -> Optional[Dataset]:
+
+    def __get_dataset_content_if_exitsts(self, dataset_id:str):
         # search for the file
         resp = (
             self.service.files()
             .list(
-                q=f"'{self.folder_id_map['datasets']}' in parents and name='{dataset_hash}.json'  and trashed = false",
+                q=f"'{self.folder_id_map['datasets']}' in parents "
+                  f"and (name='{dataset_id}.json' or name='{dataset_id}.json.gz')"
+                  f"and trashed = false",
                 spaces="drive",
-                fields="files(id)",
+                fields="files(id,name)",
             )
             .execute()
         )
 
-        if len(resp["files"]) == 0:
+        n_matches = len(resp["files"])
+
+        if n_matches == 0:
             return None
 
-        file_id = resp["files"].pop()["id"]
+        try:
+            elem = next(x for x in resp["files"] if x["name"].endswith(".gz"))
+            gzipped = True
+        except StopIteration:
+            elem = next(x for x in resp["files"] if x["name"].endswith(".json"))
+            gzipped = False
+
+        file_id = elem["id"]
 
         request = self.service.files().get_media(fileId=file_id)
-        tmp_filepath = Path(f"{dataset_hash}.json")
+
+        tmp_filepath = Path(dataset_id)
+
         with open(tmp_filepath, "wb") as file:
             downloader = MediaIoBaseDownload(file, request)
 
@@ -189,45 +204,30 @@ class GDriveStorage(Storage):
             while not done:
                 _, done = downloader.next_chunk()
 
-        with open(tmp_filepath, "r") as f:
-            ds = json.load(f)
+        if gzipped:
+            with gzip.open(tmp_filepath, 'rb') as f:
+                content = f.read()
+
+            ds = json.loads(content)
+        else:
+            with open(tmp_filepath, "r") as f:
+                ds = json.load(f)
 
         tmp_filepath.unlink()
+        return ds
 
-        return Dataset.from_json(ds)
+
+    def get_dataset_if_exists(self, dataset_hash: str) -> Optional[Dataset]:
+        content = self.__get_dataset_content_if_exitsts(dataset_hash)
+        if content is None:
+            return None
+        return Dataset.from_json(content)
 
     def get_precomputed_kernel_dataset_if_exists(self, dataset_id: str) -> Optional[PrecomputedKernelDataset]:
-        # search for the file
-        resp = (
-            self.service.files()
-            .list(
-                q=f"'{self.folder_id_map['datasets']}' in parents and name='{dataset_id}.json'  and trashed = false",
-                spaces="drive",
-                fields="files(id)",
-            )
-            .execute()
-        )
-
-        if len(resp["files"]) == 0:
+        content = self.__get_dataset_content_if_exitsts(dataset_id)
+        if content is None:
             return None
-
-        file_id = resp["files"].pop()["id"]
-
-        request = self.service.files().get_media(fileId=file_id)
-        tmp_filepath = Path(f"{dataset_id}.json")
-        with open(tmp_filepath, "wb") as file:
-            downloader = MediaIoBaseDownload(file, request)
-
-            done = False
-            while not done:
-                _, done = downloader.next_chunk()
-
-        with open(tmp_filepath, "r") as f:
-            ds = json.load(f)
-
-        tmp_filepath.unlink()
-
-        return PrecomputedKernelDataset.from_json(ds)
+        return PrecomputedKernelDataset.from_json(content)
 
     def list_results_files(self):
         resp = (

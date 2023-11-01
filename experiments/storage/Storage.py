@@ -2,6 +2,8 @@ from abc import abstractmethod
 from pathlib import Path
 from typing import Protocol, Optional
 
+import pandas as pd
+
 from experiments.datasets.Base import Dataset, PrecomputedKernelDataset
 from budgetsvm.svm import SVC
 
@@ -66,3 +68,7 @@ class Storage(Protocol):
             timestamp (str): Unix timestamp when the experiment was launched
         """
         raise NotImplementedError
+
+    @abstractmethod
+    def get_result_dataframe(self, experiment_id: str) -> pd.DataFrame:
+        pass
