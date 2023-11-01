@@ -2,12 +2,12 @@ import unittest
 
 import numpy as np
 
-from experiments.datasets.Base import compute_gram_matrix
+from experiments.datasets.Base import compute_kernel_matrix
 from kernel import GaussianKernel
 
 
 class TestBase(unittest.TestCase):
-    def test_compute_gram_matrix(self):
+    def test_compute_kernel_matrix(self):
         kernel_obj = GaussianKernel()
         k = kernel_obj.compute
 
@@ -25,7 +25,7 @@ class TestBase(unittest.TestCase):
             ]
         )
 
-        gram = compute_gram_matrix(X, X, kernel_obj)
+        gram = compute_kernel_matrix(X, X, kernel_obj)
 
         np.testing.assert_array_equal(expected, gram)
 
@@ -42,5 +42,5 @@ class TestBase(unittest.TestCase):
             ]
         )
 
-        gram_test = compute_gram_matrix(X, X_test, kernel_obj)
+        gram_test = compute_kernel_matrix(X, X_test, kernel_obj)
         np.testing.assert_array_equal(expected_test, gram_test)

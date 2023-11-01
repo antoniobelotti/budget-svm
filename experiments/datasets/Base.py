@@ -41,15 +41,15 @@ class Dataset:
     def to_PrecomputedKernelDataset(self, kernel: Kernel):
         return PrecomputedKernelDataset(
             dataset_id=self.id,
-            X_train=compute_gram_matrix(self.X_train, self.X_train, kernel),
-            X_test=compute_gram_matrix(self.X_train, self.X_test, kernel),
+            X_train=compute_kernel_matrix(self.X_train, self.X_train, kernel),
+            X_test=compute_kernel_matrix(self.X_train, self.X_test, kernel),
             y_train=self.y_train,
             y_test=self.y_test,
             kernel=kernel,
         )
 
 
-def compute_gram_matrix(X_train: npt.NDArray[float], X_test: npt.NDArray[float], kernel: Kernel) -> npt.NDArray[float]:
+def compute_kernel_matrix(X_train: npt.NDArray[float], X_test: npt.NDArray[float], kernel: Kernel) -> npt.NDArray[float]:
     return np.array([[kernel.compute(x1, x2) for x2 in X_train] for x1 in X_test])
 
 
