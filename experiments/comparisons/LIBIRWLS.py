@@ -1,3 +1,4 @@
+import math
 import os
 import pathlib
 import subprocess
@@ -26,7 +27,7 @@ class IRWLS(ClassifierMixin, BaseEstimator):
     __TRAIN_EXE = __BASE_PATH / "bin/budgeted-train"
     __PREDICT_EXE = __BASE_PATH / "bin/LIBIRWLS-predict"
 
-    def __init__(self, C: float = 1, gamma: float = 1, budget: int = 50):
+    def __init__(self, C: float = 1, kernel: int = 1, gamma: float = 1, budget: int = 50):
         """
         :param C: soft margin cost parameter
         :type C: float, default=1
@@ -34,6 +35,7 @@ class IRWLS(ClassifierMixin, BaseEstimator):
         :type gamma: float, default=1
         :param budget: EXACT number of support vectors. Too high of a value makes training stuck.
         :type budget: int, default 50
+        TODO
         """
         tmp_dir = pathlib.Path("/tmp")
         self.all_models_path = tmp_dir
@@ -50,6 +52,8 @@ class IRWLS(ClassifierMixin, BaseEstimator):
         self.C = C
         self.gamma = gamma
         self.budget = budget
+        self.kernel = kernel
+        self.t = math.ceil(os.cpu_count() * 0.8)
 
     def __try_compiling(self):
         print("LIBIRWLS executable not found. Trying to Make...")
@@ -100,7 +104,14 @@ class IRWLS(ClassifierMixin, BaseEstimator):
           -v verbose: (default 1)
                0 -- No screen messages
                1 -- Screen messages
-       """
+        """
+        assert self.kernel == 0 or self.kernel == 1
+        kernel_params = [
+            "-k", str(self.kernel)
+        ]
+        if self.kernel == 1: #rbf
+            kernel_params.append("-g")
+            kernel_params.append(str(self.gamma))
 
         params = [
             self.__TRAIN_EXE,
@@ -108,10 +119,11 @@ class IRWLS(ClassifierMixin, BaseEstimator):
             str(self.budget),
             "-c",
             str(self.C),
-            "-g",
-            str(self.gamma),
+            *kernel_params,
             "-v",
             "1",
+            "-t",
+            str(self.t),
             dataset_path,
             model_path,
         ]

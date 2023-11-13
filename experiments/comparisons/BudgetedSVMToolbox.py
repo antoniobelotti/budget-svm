@@ -30,7 +30,7 @@ class BudgetedSVMToolbox(ClassifierMixin, BaseEstimator):
     __TRAIN_EXE = __BASE_PATH / "bin/budgetedsvm-train"
     __PREDICT_EXE = __BASE_PATH / "bin/budgetedsvm-predict"
 
-    def __init__(self, gamma: float = 1, budget: int = 9999):
+    def __init__(self, gamma: float = 1, kernel=3, degree=None, strategy=0, budget: int = 9999):
         """
         :param gamma: gamma parameter for the Gaussian kernel
         :type gamma: float, default=1
@@ -49,8 +49,12 @@ class BudgetedSVMToolbox(ClassifierMixin, BaseEstimator):
         ):
             self.__try_compiling()
 
+        self.kernel = kernel
+        self.degree = degree
         self.gamma = gamma
         self.budget = budget
+
+        self.strategy = strategy
 
         # TODO: consider not hard coding
         self.epochs = 10
@@ -74,24 +78,42 @@ class BudgetedSVMToolbox(ClassifierMixin, BaseEstimator):
         dataset_path = self.all_datasets_path / str(uuid.uuid4())
         dump_svmlight_file(X, y, dataset_path, zero_based=False)
 
+        kernel_params = [
+            "-K", str(self.kernel),
+        ]
+        if self.kernel == 0: #rbf
+            kernel_params.append("-g")
+            kernel_params.append(str(self.gamma))
+        elif self.kernel == 2: #polynomial
+            kernel_params.append("-d")
+            kernel_params.append(str(self.degree))
+        elif self.kernel == 3: #linear
+            pass
+
+        kernel_params.append("-m") # maintenance strategy: [0 removal, 1 merging]
+        if self.strategy == 1 and self.kernel != 0: # merging requires RBF kernel
+            kernel_params.append("0")
+        else:
+            kernel_params.append(str(self.strategy))
+
+        assert self.kernel in [0, 2, 3]
+        assert self.strategy == 0 or self.strategy == 1
+
         params = [
-            self.__TRAIN_EXE,
+            str(self.__TRAIN_EXE),
             "-A",
             "4",
             "-B",
             str(self.budget),
             "-v",
             "1",
-            "-g",
-            str(self.gamma),
-            "-m",  # maintenance strategy: [0 removal, 1 merging]
-            "1",
+            *kernel_params,
             "-e",
             str(self.epochs),
             "-r",
             "1" if self.randomize else "0",
-            dataset_path,
-            model_path,
+            str(dataset_path),
+            str(model_path),
         ]
 
         with Timer() as t:
