@@ -394,7 +394,11 @@ class BaseExperimentOldStrategy(ABC):
 
     def __generate_budget_values(self, dataset: Dataset | PrecomputedKernelDataset) -> Iterator[(int, float)]:
         FB = self.__select_best_model(dataset, None).get("num_sv")
-        assert FB is not None and FB > 0
+        if FB is None:
+            self.logger.error("unable to train model without budget constraint")
+            yield from []
+            return
+
         dataset_id = dataset.id if isinstance(dataset, Dataset) else dataset.dataset_id
 
         for p in self.BUDGET_PERCENTAGES:
