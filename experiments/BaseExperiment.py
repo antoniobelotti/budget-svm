@@ -180,7 +180,7 @@ class BaseExperiment(ABC):
                 self.logger.debug(f"budget={perc*100}% of dataset - model selection starting")
 
                 res = self.__select_best_model(precomp_dataset, budget)
-                self.logger.info(f"best model achieved {res['score']:.2f} test accuracy with params {res['params']}")
+                self.logger.debug(f"best model achieved {res['score']:.2f} test accuracy with params {res['params']}")
                 res["model_name"] = f"{perc:.2f}_budget"
                 res["budget_percentage"] = perc
 
@@ -204,7 +204,7 @@ class BaseExperiment(ABC):
         for budget, perc in self.__generate_budget_values(dataset):
             self.logger.debug(f"budget={perc*100}% of dataset - model selection starting")
             ds_res = self.__select_best_model(dataset, budget)
-            self.logger.info(f"best model achieved {ds_res['score']:.2f} test accuracy with params {ds_res['params']}")
+            self.logger.debug(f"best model achieved {ds_res['score']:.2f} test accuracy with params {ds_res['params']}")
             self.logger.debug(f"budget={perc*100}% of dataset - model selection done")
 
             ds_res["model_name"] = f"{perc:.2f}_budget"
@@ -220,7 +220,7 @@ class BaseExperiment(ABC):
             )
             self.USE_PRECOMPUTED_KERNEL = False
 
-        self.logger.info(
+        self.logger.debug(
             textwrap.dedent(
                 f"""
                 Running experiment {self.EXPERIMENT_ID} with the following configuration:
@@ -417,17 +417,18 @@ class BaseExperimentOldStrategy(ABC):
                 self.logger.debug(f"budget={perc * 100}% - model selection starting")
 
                 res = self.__select_best_model(precomp_dataset, budget)
-                self.logger.info(f"best model achieved {res['score']:.2f} test accuracy with params {res['params']}")
+                self.logger.debug(f"best model achieved {res['score']:.2f} test accuracy with params {res['params']}")
                 res["model_name"] = f"{perc:.2f}_budget"
                 res["budget_percentage"] = perc
 
-                # fist model being trained with this budget
-                if budget not in results:
-                    results[budget] = res
+                # fist model being trained with this budget percentage
+                if perc not in results:
+                    results[perc] = res
                 else:
-                    # update this budget results and model only if the current model outperforms the previous best one
-                    if res.get("score", 0) > results[budget].get("score", 0):
-                        results[budget] = res
+                    # update this budget percentage results and model only
+                    # if the current model outperforms the previous best one
+                    if res.get("score", 0) > results[perc].get("score", 0):
+                        results[perc] = res
 
                 self.logger.debug(f"budget={perc * 100}% - model selection done")
 
@@ -441,7 +442,7 @@ class BaseExperimentOldStrategy(ABC):
         for budget, perc in self.__generate_budget_values(dataset):
             self.logger.debug(f"budget={perc * 100}% - model selection starting")
             ds_res = self.__select_best_model(dataset, budget)
-            self.logger.info(f"best model achieved {ds_res['score']:.2f} test accuracy with params {ds_res['params']}")
+            self.logger.debug(f"best model achieved {ds_res['score']:.2f} test accuracy with params {ds_res['params']}")
             self.logger.debug(f"budget={perc * 100}% - model selection done")
 
             ds_res["model_name"] = f"{perc:.2f}_budget"
@@ -457,7 +458,7 @@ class BaseExperimentOldStrategy(ABC):
             )
             self.USE_PRECOMPUTED_KERNEL = False
 
-        self.logger.info(
+        self.logger.debug(
             textwrap.dedent(
                 f"""
                 Running experiment {self.EXPERIMENT_ID} with the following configuration:

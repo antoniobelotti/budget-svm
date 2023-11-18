@@ -331,8 +331,8 @@ class SvmGuide1xperimentOldStrategy(BaseExperimentOldStrategy):
 
 if __name__ == "__main__":
     #exp = a1aExperimentOldStrategy(GDriveStorage())
-    storage = LocalStorage()
+    storage = GDriveStorage()
 
-    SvmGuide1xperiment(storage).run()
+    #SvmGuide1xperiment(storage).run()
     SvmGuide1xperimentOldStrategy(storage).run()
 
