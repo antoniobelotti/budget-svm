@@ -172,7 +172,7 @@ class SvmGuide1xperiment(BaseExperiment):
 
 class a1aExperimentOldStrategy(BaseExperimentOldStrategy):
     CROSS_VALIDATION = 5
-    BUDGET_PERCENTAGES = [.3,.4,.5,.6,.7,.8,.9]
+    BUDGET_PERCENTAGES = [.3,.4,.5,.6,.7,.8,.9,1]
     EXPERIMENT_FILE_SUFFIX = "_a1a_our_model_old_strategy"
 
     def get_cvgrid_parameter_dict(self) -> dict:
@@ -225,7 +225,7 @@ class a1aExperimentOldStrategy(BaseExperimentOldStrategy):
 
 class GisetteExperimentOldStrategy(BaseExperimentOldStrategy):
     CROSS_VALIDATION = 5
-    BUDGET_PERCENTAGES = [.3,.4,.5,.6,.7,.8,.9]
+    BUDGET_PERCENTAGES = [.3,.4,.5,.6,.7,.8,.9,1]
     EXPERIMENT_FILE_SUFFIX = "_gisette_our_model_old_strategy"
 
     def get_cvgrid_parameter_dict(self) -> dict:
@@ -279,7 +279,7 @@ class GisetteExperimentOldStrategy(BaseExperimentOldStrategy):
 
 class SvmGuide1xperimentOldStrategy(BaseExperimentOldStrategy):
     CROSS_VALIDATION = 5
-    BUDGET_PERCENTAGES = [.3,.4,.5,.6,.7,.8,.9]
+    BUDGET_PERCENTAGES = [.3,.4,.5,.6,.7,.8,.9,1]
     EXPERIMENT_FILE_SUFFIX = "_svmguide1_our_model_old_strategy"
 
     def get_cvgrid_parameter_dict(self) -> dict:
