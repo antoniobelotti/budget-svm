@@ -253,8 +253,7 @@ class GurobiSolver(Solver):
                     gamma_opt = np.array([g.x for g in gamma])
 
                 solution = (alpha_opt, gamma_opt) if budget is not None else alpha_opt
-
-                return np.array(solution), model.Status, model.Params.MIPGap
+                return np.array(solution), model.Status, model.MIPGap if model.IsMip else 0
 
     def solve_regression_problem(self, X, y, C=1, kernel=GaussianKernel(), epsilon=0.1, budget=None):
         """Optimize via gurobi.
